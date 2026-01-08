@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "name": "rowell-hplc-new",
+  "framework": null,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/client",
+  "installCommand": "npm install",
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
