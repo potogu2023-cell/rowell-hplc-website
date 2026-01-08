@@ -1,9 +1,26 @@
 {
   "version": 2,
-  "name": "rowell-hplc-new",
-  "framework": null,
+  "builds": [
+    {
+      "src": "dist/index.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "dist/public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "dist/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "dist/public/$1"
+    }
+  ],
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/public",
   "installCommand": "npm install --legacy-peer-deps",
   "env": {
     "NODE_ENV": "production"
