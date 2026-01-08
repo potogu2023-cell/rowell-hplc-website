@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { trpc } from '../trpc';
+import { trpc } from '../lib/trpc';
 
 export default function ExecuteImageUpdate() {
   const [status, setStatus] = useState<string>('准备执行更新...');
