@@ -1,0 +1,2 @@
+2025-11-04 23:32:47,309 - __main__ - INFO - 已生成 10 个产品的爬取列表: /home/ubuntu/crawler_project/data/agilent_crawl_list.json
+2025-11-04 23:42:31,670 - product_crawler - INFO - 报告已生成: output/agilent_sample_report.md
