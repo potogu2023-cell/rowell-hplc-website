@@ -27,12 +27,18 @@ export async function getDb() {
       
       const [, user, password, host, port, database] = urlMatch;
       
+      // Decode URL-encoded username and password
+      const decodedUser = decodeURIComponent(user);
+      const decodedPassword = decodeURIComponent(password);
+      
+      console.log('[Database] Connecting with user:', decodedUser);
+      
       // Create connection pool with proper config
       const connection = await mysql.createPool({
         host,
         port: parseInt(port),
-        user,
-        password,
+        user: decodedUser,
+        password: decodedPassword,
         database,
         ssl: hasSSL ? { rejectUnauthorized: true } : undefined,
       });
