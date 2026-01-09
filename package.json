@@ -93,7 +93,11 @@
     "@tailwindcss/vite": "^4.1.18",
     "vite": "^7.1.7",
     "esbuild": "^0.25.0",
-    "@vitejs/plugin-react": "^5.0.4"
+    "@vitejs/plugin-react": "^5.0.4",
+    "bcrypt": "^6.0.0",
+    "exceljs": "^4.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "csv-stringify": "^6.6.0"
   },
   "devDependencies": {
     "@builder.io/vite-plugin-jsx-loc": "^0.1.1",
@@ -106,11 +110,7 @@
     "@types/react-dom": "^19.1.9",
     "add": "^2.0.6",
     "autoprefixer": "^10.4.20",
-    "bcrypt": "^6.0.0",
-    "csv-stringify": "^6.6.0",
     "drizzle-kit": "^0.31.4",
-    "exceljs": "^4.4.0",
-    "jsonwebtoken": "^9.0.2",
     "pnpm": "^10.15.1",
     "postcss": "^8.4.47",
     "prettier": "^3.6.2",
