@@ -131,88 +131,70 @@ export async function getProductsByBrand(brand: string) {
 
 // Category queries
 export async function getAllCategories() {
-  const db = await getDb();
-  if (!db) return [];
-  const { categories } = await import("../drizzle/schema");
-  return await db.select().from(categories);
+  return await getCategoriesWithProductCount();
 }
 
 export async function getVisibleCategories() {
-  const db = await getDb();
-  if (!db) return [];
-  const { categories } = await import("../drizzle/schema");
-  return await db.select().from(categories).where(eq(categories.isVisible, 1));
+  return await getCategoriesWithProductCount();
 }
 
 export async function getCategoriesByLevel(level: number) {
-  const db = await getDb();
-  if (!db) return [];
-  const { categories } = await import("../drizzle/schema");
-  return await db.select().from(categories).where(eq(categories.level, level));
+  // All categories from crawler_results are level 1
+  if (level === 1) {
+    return await getCategoriesWithProductCount();
+  }
+  return [];
 }
 
 export async function getCategoryById(id: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-  const { categories } = await import("../drizzle/schema");
-  const result = await db.select().from(categories).where(eq(categories.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  const allCategories = await getCategoriesWithProductCount();
+  return allCategories.find(cat => cat.id === id);
 }
 
 export async function getChildCategories(parentId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  const { categories } = await import("../drizzle/schema");
-  return await db.select().from(categories).where(eq(categories.parentId, parentId));
+  // No child categories in crawler_results
+  return [];
 }
 
 export async function getTopLevelCategories(visibleOnly: boolean = true) {
-  const db = await getDb();
-  if (!db) return [];
-  const { categories } = await import("../drizzle/schema");
-  const { and, isNull } = await import("drizzle-orm");
-  
-  if (visibleOnly) {
-    return await db.select().from(categories)
-      .where(and(isNull(categories.parentId), eq(categories.isVisible, 1)))
-      .orderBy(categories.displayOrder);
-  } else {
-    return await db.select().from(categories)
-      .where(isNull(categories.parentId))
-      .orderBy(categories.displayOrder);
-  }
+  // All categories from crawler_results are top-level
+  return await getCategoriesWithProductCount();
 }
 
 export async function getCategoriesWithProductCount() {
   const db = await getDb();
   if (!db) return [];
-  const { categories, productCategories } = await import("../drizzle/schema");
-  const { countDistinct } = await import("drizzle-orm");
+  const { products } = await import("../drizzle/schema");
+  const { count, sql } = await import("drizzle-orm");
   
-  // Get all visible categories with DISTINCT product count
-  const result = await db
-    .select({
-      id: categories.id,
-      name: categories.name,
-      nameEn: categories.nameEn,
-      slug: categories.slug,
-      parentId: categories.parentId,
-      level: categories.level,
-      displayOrder: categories.displayOrder,
-      isVisible: categories.isVisible,
-      description: categories.description,
-      icon: categories.icon,
-      createdAt: categories.createdAt,
-      updatedAt: categories.updatedAt,
-      productCount: countDistinct(productCategories.productId),
-    })
-    .from(categories)
-    .leftJoin(productCategories, eq(categories.id, productCategories.categoryId))
-    .where(eq(categories.isVisible, 1))
-    .groupBy(categories.id)
-    .orderBy(categories.displayOrder);
-  
-  return result;
+  try {
+    // Get categories from crawler_results table with product count
+    const result = await db
+      .select({
+        id: sql<number>`ROW_NUMBER() OVER (ORDER BY ${products.category})`,
+        name: products.category,
+        nameEn: products.category,
+        slug: sql<string>`LOWER(REPLACE(${products.category}, ' ', '-'))`,
+        parentId: sql<number | null>`NULL`,
+        level: sql<number>`1`,
+        displayOrder: sql<number>`0`,
+        isVisible: sql<number>`1`,
+        description: sql<string | null>`NULL`,
+        icon: sql<string | null>`NULL`,
+        createdAt: sql<string>`NOW()`,
+        updatedAt: sql<string>`NOW()`,
+        productCount: count(products.id),
+      })
+      .from(products)
+      .where(sql`${products.status} IN ('verified', 'active') AND ${products.category} IS NOT NULL AND ${products.category} != ''`)
+      .groupBy(products.category)
+      .orderBy(products.category);
+    
+    return result;
+  } catch (error) {
+    console.error('[Database] Error in getCategoriesWithProductCount:', error);
+    return [];
+  }
 }
 
 
