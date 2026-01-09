@@ -12,16 +12,21 @@ export async function getDb() {
     try {
       // Parse DATABASE_URL
       let connectionString = process.env.DATABASE_URL;
+      console.log('[Database] Original DATABASE_URL:', connectionString);
       
       // Check if URL has ssl parameter and remove it
       const hasSSL = connectionString.includes('?ssl=');
       connectionString = connectionString.replace(/\?ssl=true/, '').replace(/\?ssl=false/, '');
+      console.log('[Database] After removing SSL param:', connectionString);
+      console.log('[Database] Has SSL:', hasSSL);
       
       // Parse the connection URL
       // Format: mysql://username:password@host:port/database
       const urlMatch = connectionString.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+      console.log('[Database] URL match result:', urlMatch ? 'SUCCESS' : 'FAILED');
       
       if (!urlMatch) {
+        console.error('[Database] Failed to parse DATABASE_URL. Expected format: mysql://username:password@host:port/database');
         throw new Error('Invalid DATABASE_URL format');
       }
       
