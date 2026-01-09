@@ -31,20 +31,39 @@ export async function getDb() {
       const decodedUser = decodeURIComponent(user);
       const decodedPassword = decodeURIComponent(password);
       
-      console.log('[Database] Connecting with user:', decodedUser);
+      console.log('[Database] Parsed connection info:');
+      console.log('[Database]   Host:', host);
+      console.log('[Database]   Port:', port);
+      console.log('[Database]   User:', decodedUser);
+      console.log('[Database]   Database:', database);
+      console.log('[Database]   SSL:', hasSSL);
       
       // Create connection pool with proper config
-      const connection = await mysql.createPool({
+      const connection = mysql.createPool({
         host,
         port: parseInt(port),
         user: decodedUser,
         password: decodedPassword,
         database,
         ssl: hasSSL ? { rejectUnauthorized: true } : undefined,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
       });
       
+      // Test the connection
+      try {
+        await connection.query('SELECT 1');
+        console.log('[Database] Connection test successful');
+      } catch (testError: any) {
+        console.error('[Database] Connection test failed:', testError.message);
+        console.error('[Database] Error code:', testError.code);
+        console.error('[Database] SQL state:', testError.sqlState);
+        throw testError;
+      }
+      
       _db = drizzle(connection);
-      console.log('[Database] Connected successfully');
+      console.log('[Database] Drizzle initialized successfully');
     } catch (error) {
       console.error("[Database] Failed to connect:", error);
       _db = null;
