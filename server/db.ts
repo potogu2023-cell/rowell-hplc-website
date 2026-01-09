@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import { InsertProduct, InsertUser, products, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -9,7 +10,25 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      // Parse DATABASE_URL and handle SSL parameter
+      let connectionString = process.env.DATABASE_URL;
+      let sslConfig: any = undefined;
+      
+      // Check if URL has ssl parameter
+      if (connectionString.includes('?ssl=')) {
+        // Remove ssl parameter from URL
+        connectionString = connectionString.replace(/\?ssl=true/, '').replace(/\?ssl=false/, '');
+        // Enable SSL for TiDB Cloud
+        sslConfig = { rejectUnauthorized: true };
+      }
+      
+      // Create connection pool with SSL config
+      const connection = await mysql.createPool({
+        uri: connectionString,
+        ssl: sslConfig,
+      });
+      
+      _db = drizzle(connection);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
