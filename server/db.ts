@@ -10,27 +10,37 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      // Parse DATABASE_URL and handle SSL parameter
+      // Parse DATABASE_URL
       let connectionString = process.env.DATABASE_URL;
-      let sslConfig: any = undefined;
       
-      // Check if URL has ssl parameter
-      if (connectionString.includes('?ssl=')) {
-        // Remove ssl parameter from URL
-        connectionString = connectionString.replace(/\?ssl=true/, '').replace(/\?ssl=false/, '');
-        // Enable SSL for TiDB Cloud
-        sslConfig = { rejectUnauthorized: true };
+      // Check if URL has ssl parameter and remove it
+      const hasSSL = connectionString.includes('?ssl=');
+      connectionString = connectionString.replace(/\?ssl=true/, '').replace(/\?ssl=false/, '');
+      
+      // Parse the connection URL
+      // Format: mysql://username:password@host:port/database
+      const urlMatch = connectionString.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+      
+      if (!urlMatch) {
+        throw new Error('Invalid DATABASE_URL format');
       }
       
-      // Create connection pool with SSL config
+      const [, user, password, host, port, database] = urlMatch;
+      
+      // Create connection pool with proper config
       const connection = await mysql.createPool({
-        uri: connectionString,
-        ssl: sslConfig,
+        host,
+        port: parseInt(port),
+        user,
+        password,
+        database,
+        ssl: hasSSL ? { rejectUnauthorized: true } : undefined,
       });
       
       _db = drizzle(connection);
+      console.log('[Database] Connected successfully');
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.error("[Database] Failed to connect:", error);
       _db = null;
     }
   }
