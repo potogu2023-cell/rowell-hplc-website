@@ -450,7 +450,7 @@ export const appRouter = router({
         const conditions: any[] = [];
         
         // Status filter - only show active and verified products
-        conditions.push(sql`${products.status} IN ('active', 'verified')`);
+        conditions.push(inArray(products.status, ['active', 'verified']));
         
         // Brand filter
         if (input?.brand) {
@@ -635,6 +635,10 @@ export const appRouter = router({
         if (!db) return [];
         
         const { products, productCategories } = await import("../drizzle/schema");
+        const { inArray } = await import("drizzle-orm");
+        
+        // Status filter
+        const statusFilter = inArray(products.status, ['active', 'verified']);
         
         let query;
         if (input?.categoryId) {
@@ -646,7 +650,7 @@ export const appRouter = router({
             })
             .from(products)
             .innerJoin(productCategories, eq(products.id, productCategories.productId))
-            .where(eq(productCategories.categoryId, input.categoryId))
+            .where(and(eq(productCategories.categoryId, input.categoryId), statusFilter))
             .groupBy(products.brand)
             .orderBy(products.brand);
         } else {
@@ -657,6 +661,7 @@ export const appRouter = router({
               count: sql<number>`count(*)`
             })
             .from(products)
+            .where(statusFilter)
             .groupBy(products.brand)
             .orderBy(products.brand);
         }
