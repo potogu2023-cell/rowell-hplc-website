@@ -1,3 +1,4 @@
+// Image Sync API - Version 1.0.1 - 2026-01-10
 import { COOKIE_NAME } from "@shared/const";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
