@@ -273,7 +273,7 @@ var init_schema = __esm({
       ]
     );
     products = mysqlTable(
-      "crawler_results",
+      "products",
       {
         id: int().autoincrement().notNull(),
         productId: varchar({ length: 128 }).notNull(),
@@ -448,12 +448,56 @@ __export(db_exports, {
 });
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 async function getDb() {
+  console.log("[Database] getDb() called. _db exists:", !!_db, "DATABASE_URL exists:", !!process.env.DATABASE_URL);
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      let connectionString = process.env.DATABASE_URL;
+      console.log("[Database] Original DATABASE_URL:", connectionString);
+      const hasSSL = connectionString.includes("?ssl=");
+      connectionString = connectionString.replace(/\?ssl=true/, "").replace(/\?ssl=false/, "");
+      console.log("[Database] After removing SSL param:", connectionString);
+      console.log("[Database] Has SSL:", hasSSL);
+      const urlMatch = connectionString.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+      console.log("[Database] URL match result:", urlMatch ? "SUCCESS" : "FAILED");
+      if (!urlMatch) {
+        console.error("[Database] Failed to parse DATABASE_URL. Expected format: mysql://username:password@host:port/database");
+        throw new Error("Invalid DATABASE_URL format");
+      }
+      const [, user, password, host, port, database] = urlMatch;
+      const decodedUser = decodeURIComponent(user);
+      const decodedPassword = decodeURIComponent(password);
+      console.log("[Database] Parsed connection info:");
+      console.log("[Database]   Host:", host);
+      console.log("[Database]   Port:", port);
+      console.log("[Database]   User:", decodedUser);
+      console.log("[Database]   Database:", database);
+      console.log("[Database]   SSL:", hasSSL);
+      const connection = mysql.createPool({
+        host,
+        port: parseInt(port),
+        user: decodedUser,
+        password: decodedPassword,
+        database,
+        ssl: hasSSL ? { rejectUnauthorized: true } : void 0,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+      });
+      try {
+        await connection.query("SELECT 1");
+        console.log("[Database] Connection test successful");
+      } catch (testError) {
+        console.error("[Database] Connection test failed:", testError.message);
+        console.error("[Database] Error code:", testError.code);
+        console.error("[Database] SQL state:", testError.sqlState);
+        throw testError;
+      }
+      _db = drizzle(connection);
+      console.log("[Database] Drizzle initialized successfully");
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.error("[Database] Failed to connect:", error);
       _db = null;
     }
   }
@@ -549,68 +593,53 @@ async function getProductsByBrand(brand) {
   return result;
 }
 async function getAllCategories() {
-  const db = await getDb();
-  if (!db) return [];
-  const { categories: categories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  return await db.select().from(categories2);
+  return await getCategoriesWithProductCount();
 }
 async function getVisibleCategories() {
-  const db = await getDb();
-  if (!db) return [];
-  const { categories: categories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  return await db.select().from(categories2).where(eq(categories2.isVisible, 1));
+  return await getCategoriesWithProductCount();
 }
 async function getCategoriesByLevel(level) {
-  const db = await getDb();
-  if (!db) return [];
-  const { categories: categories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  return await db.select().from(categories2).where(eq(categories2.level, level));
+  if (level === 1) {
+    return await getCategoriesWithProductCount();
+  }
+  return [];
 }
 async function getCategoryById(id) {
-  const db = await getDb();
-  if (!db) return void 0;
-  const { categories: categories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  const result = await db.select().from(categories2).where(eq(categories2.id, id)).limit(1);
-  return result.length > 0 ? result[0] : void 0;
+  const allCategories = await getCategoriesWithProductCount();
+  return allCategories.find((cat) => cat.id === id);
 }
 async function getChildCategories(parentId) {
-  const db = await getDb();
-  if (!db) return [];
-  const { categories: categories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  return await db.select().from(categories2).where(eq(categories2.parentId, parentId));
+  return [];
 }
 async function getTopLevelCategories(visibleOnly = true) {
-  const db = await getDb();
-  if (!db) return [];
-  const { categories: categories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  const { and: and5, isNull } = await import("drizzle-orm");
-  if (visibleOnly) {
-    return await db.select().from(categories2).where(and5(isNull(categories2.parentId), eq(categories2.isVisible, 1))).orderBy(categories2.displayOrder);
-  } else {
-    return await db.select().from(categories2).where(isNull(categories2.parentId)).orderBy(categories2.displayOrder);
-  }
+  return await getCategoriesWithProductCount();
 }
 async function getCategoriesWithProductCount() {
   const db = await getDb();
   if (!db) return [];
-  const { categories: categories2, productCategories: productCategories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  const { countDistinct } = await import("drizzle-orm");
-  const result = await db.select({
-    id: categories2.id,
-    name: categories2.name,
-    nameEn: categories2.nameEn,
-    slug: categories2.slug,
-    parentId: categories2.parentId,
-    level: categories2.level,
-    displayOrder: categories2.displayOrder,
-    isVisible: categories2.isVisible,
-    description: categories2.description,
-    icon: categories2.icon,
-    createdAt: categories2.createdAt,
-    updatedAt: categories2.updatedAt,
-    productCount: countDistinct(productCategories2.productId)
-  }).from(categories2).leftJoin(productCategories2, eq(categories2.id, productCategories2.categoryId)).where(eq(categories2.isVisible, 1)).groupBy(categories2.id).orderBy(categories2.displayOrder);
-  return result;
+  const { products: products3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+  const { count, sql: sql4 } = await import("drizzle-orm");
+  try {
+    const result = await db.select({
+      id: sql4`ROW_NUMBER() OVER (ORDER BY ${products3.category})`,
+      name: products3.category,
+      nameEn: products3.category,
+      slug: sql4`LOWER(REPLACE(${products3.category}, ' ', '-'))`,
+      parentId: sql4`NULL`,
+      level: sql4`1`,
+      displayOrder: sql4`0`,
+      isVisible: sql4`1`,
+      description: sql4`NULL`,
+      icon: sql4`NULL`,
+      createdAt: sql4`NOW()`,
+      updatedAt: sql4`NOW()`,
+      productCount: count(products3.id)
+    }).from(products3).where(sql4`${products3.status} IN ('verified', 'active') AND ${products3.category} IS NOT NULL AND ${products3.category} != ''`).groupBy(products3.category).orderBy(products3.category);
+    return result;
+  } catch (error) {
+    console.error("[Database] Error in getCategoriesWithProductCount:", error);
+    return [];
+  }
 }
 async function getUserByEmail(email) {
   const db = await getDb();
@@ -689,7 +718,7 @@ async function getCartByUserId(userId) {
     console.warn("[Database] Cannot get cart: database not available");
     return [];
   }
-  const { cart: cart2, products: products2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+  const { cart: cart2, products: products3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
   const { eq: eq10 } = await import("drizzle-orm");
   const result = await db.select({
     id: cart2.id,
@@ -699,8 +728,8 @@ async function getCartByUserId(userId) {
     notes: cart2.notes,
     createdAt: cart2.createdAt,
     updatedAt: cart2.updatedAt,
-    product: products2
-  }).from(cart2).leftJoin(products2, eq10(cart2.productId, products2.id)).where(eq10(cart2.userId, userId));
+    product: products3
+  }).from(cart2).leftJoin(products3, eq10(cart2.productId, products3.id)).where(eq10(cart2.userId, userId));
   return result;
 }
 async function addToCart(userId, productId, quantity = 1, notes) {
@@ -834,7 +863,7 @@ async function getInquiryItems(inquiryId) {
     console.warn("[Database] Cannot get inquiry items: database not available");
     return [];
   }
-  const { inquiryItems: inquiryItems2, products: products2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+  const { inquiryItems: inquiryItems2, products: products3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
   const { eq: eq10 } = await import("drizzle-orm");
   const result = await db.select({
     id: inquiryItems2.id,
@@ -844,8 +873,8 @@ async function getInquiryItems(inquiryId) {
     notes: inquiryItems2.notes,
     quotedPrice: inquiryItems2.quotedPrice,
     createdAt: inquiryItems2.createdAt,
-    product: products2
-  }).from(inquiryItems2).leftJoin(products2, eq10(inquiryItems2.productId, products2.id)).where(eq10(inquiryItems2.inquiryId, inquiryId));
+    product: products3
+  }).from(inquiryItems2).leftJoin(products3, eq10(inquiryItems2.productId, products3.id)).where(eq10(inquiryItems2.inquiryId, inquiryId));
   return result;
 }
 async function updateUserConsent(userId, consentMode) {
@@ -1511,7 +1540,7 @@ import { sql as sql2, eq as eq5, and as and3, desc as desc3 } from "drizzle-orm"
 async function generateMonthlyReport(year, month) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const { inquiries: inquiries2, users: users2, inquiryItems: inquiryItems2, products: products2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+  const { inquiries: inquiries2, users: users2, inquiryItems: inquiryItems2, products: products3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0, 23, 59, 59);
   const totalInquiriesResult = await db.select({ count: sql2`count(*)` }).from(inquiries2).where(and3(
@@ -1533,14 +1562,14 @@ async function generateMonthlyReport(year, month) {
   ));
   const newCustomers = Number(newCustomersResult[0]?.count || 0);
   const topProductsResult = await db.select({
-    productName: products2.name,
-    brand: products2.brand,
-    partNumber: products2.partNumber,
+    productName: products3.name,
+    brand: products3.brand,
+    partNumber: products3.partNumber,
     count: sql2`count(*)`
-  }).from(inquiryItems2).leftJoin(products2, eq5(inquiryItems2.productId, products2.id)).leftJoin(inquiries2, eq5(inquiryItems2.inquiryId, inquiries2.id)).where(and3(
+  }).from(inquiryItems2).leftJoin(products3, eq5(inquiryItems2.productId, products3.id)).leftJoin(inquiries2, eq5(inquiryItems2.inquiryId, inquiries2.id)).where(and3(
     sql2`${inquiries2.createdAt} >= ${startDate.toISOString()}`,
     sql2`${inquiries2.createdAt} <= ${endDate.toISOString()}`
-  )).groupBy(products2.id, products2.name, products2.brand, products2.partNumber).orderBy(desc3(sql2`count(*)`)).limit(10);
+  )).groupBy(products3.id, products3.name, products3.brand, products3.partNumber).orderBy(desc3(sql2`count(*)`)).limit(10);
   const workbook = new ExcelJS2.Workbook();
   const worksheet = workbook.addWorksheet("Monthly Report");
   worksheet.columns = [
@@ -2815,65 +2844,6 @@ function getQueueStatus() {
 // server/routers.ts
 init_schema();
 
-// server/image-updates-data.ts
-var IMAGE_UPDATES = [
-  { productId: "245011", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/nOvkjZsQztRfESyf.png" },
-  { productId: "245030", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/gckmrvfVoNJDaAdU.png" },
-  { productId: "245029", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/TJsFLdWMUMbgPwqQ.png" },
-  { productId: "245031", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/onAtgDOdaezHPkiB.png" },
-  { productId: "245032", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/PbUTVRvYEdsQHBsl.png" },
-  { productId: "245034", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/AurkIybFdHyUVTJN.png" },
-  { productId: "245036", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/NtPfQFZiJToophkt.png" },
-  { productId: "245033", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/IGxQyekliJaSHzId.png" },
-  { productId: "245035", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/xWwxwwrxewmSzueM.png" },
-  { productId: "245037", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/zxKnhHnaDucSbunu.png" },
-  { productId: "245041", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/dDcORpzOQgtAtobN.png" },
-  { productId: "245039", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/VUaOOZkjRUrrQexH.png" },
-  { productId: "245042", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/MKurBiwqckwJnqDw.png" },
-  { productId: "245040", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/qaYBxnDffrCjHRLx.png" },
-  { productId: "245038", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/spngHVPazoyZBZgV.png" },
-  { productId: "245045", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/vvpQYGLSqcvapwAg.png" },
-  { productId: "245043", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/sJaRLntbIWIIUkXH.png" },
-  { productId: "245044", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/XNmgULvPokWMobCd.png" },
-  { productId: "245047", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/WytBklNYbXAUoTaF.png" },
-  { productId: "245046", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/ARPWYDmfgiarnncp.png" },
-  { productId: "245052", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/yRSEnrTtViuwSSRu.png" },
-  { productId: "245049", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/SuJMQssRrPYFZwzc.png" },
-  { productId: "245050", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/WtfoTTEAQlanPmLn.png" },
-  { productId: "245051", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/uDmobFXxOcDhouAi.png" },
-  { productId: "245048", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/RdtBXOLVwMQAIvjo.png" },
-  { productId: "245057", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/JpjSEJxTDHKcHAuu.png" },
-  { productId: "245056", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/RRdokrFLIzLhSxrh.png" },
-  { productId: "245055", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/dUTFJUNaoHjvoIqB.png" },
-  { productId: "245053", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/hjINDodNspauGLfe.png" },
-  { productId: "245054", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/sARYKbnGGMLhyzPJ.png" },
-  { productId: "245058", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/sABtiSLFhuuAWojB.png" },
-  { productId: "245061", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/vyqCQjnUtQDDAlnZ.png" },
-  { productId: "245059", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/NVjpBvTZduqqJjxp.png" },
-  { productId: "245062", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/vWtTFKiPBWfjpytz.png" },
-  { productId: "245060", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/TzVvPzzNwghshhYm.png" },
-  { productId: "245066", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/qBUmvKBbcLBltmbb.png" },
-  { productId: "245064", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/SuIXBWaEAKuJmLgH.png" },
-  { productId: "245067", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/muOqXxvUyszBVPMO.png" },
-  { productId: "245063", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/EdyiiQpoFCiEZAtY.png" },
-  { productId: "245065", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/FvrDtMwoSqMUnwKZ.png" },
-  { productId: "245072", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/SpYDhRwnyqpWYqJh.png" },
-  { productId: "245068", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/xNzBKlpWDQzrrart.png" },
-  { productId: "245070", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/TIFhvgshoScHPjsW.png" },
-  { productId: "245071", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/eQOUECqixcyUMwvq.png" },
-  { productId: "245069", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/HzhGOfYtaRENHkSR.png" },
-  { productId: "AGIL-699968-301", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/TdUHvJMNLbIyeWDo.png" },
-  { productId: "DAIC-80511", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/qMxwjCQCONitEmuC.png" },
-  { productId: "DAIC-80592", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/tWDqvudlLMaOMeoo.png" },
-  { productId: "DAIC-88592", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/kzVpJitbIlOhOFGw.png" },
-  { productId: "DAIC-80593", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/URbmxzrQMHWaxVNm.png" },
-  { productId: "DAIC-80523", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/fAcoEPwKXoSoBUdv.png" },
-  { productId: "DAIC-80524", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/pDltwlZujPVCIlOU.png" },
-  { productId: "DAIC-80522", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/uzSxsWXvvBphutBm.png" },
-  { productId: "AGIL-121-1012", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/bbxyQjrWdMLNJebn.png" },
-  { productId: "PHEN-7HK-G009-22", imageUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310419663031980410/gjZoCcxHiAHneHhr.png" }
-];
-
 // server/db-resources.ts
 init_db();
 init_schema();
@@ -3393,49 +3363,48 @@ var appRouter = router({
     }).optional()).query(async ({ input }) => {
       const db = await getDb();
       if (!db) return { products: [], total: 0, page: 1, pageSize: 24, totalPages: 0 };
-      const { products: products2, productCategories: productCategories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { products: products3, productCategories: productCategories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       const { gte, lte, inArray } = await import("drizzle-orm");
       const page = input?.page || 1;
       const pageSize = input?.pageSize || 24;
       const offset = (page - 1) * pageSize;
       console.log("[products.list] Input params:", JSON.stringify(input, null, 2));
       const conditions = [];
-      conditions.push(sql3`${products2.status} IN ('active', 'verified')`);
       if (input?.brand) {
-        conditions.push(eq6(products2.brand, input.brand));
+        conditions.push(eq6(products3.brand, input.brand));
       }
       if (input?.particleSizeMin !== void 0) {
-        conditions.push(gte(products2.particleSizeNum, input.particleSizeMin));
+        conditions.push(gte(products3.particleSizeNum, input.particleSizeMin));
       }
       if (input?.particleSizeMax !== void 0) {
-        conditions.push(lte(products2.particleSizeNum, input.particleSizeMax));
+        conditions.push(lte(products3.particleSizeNum, input.particleSizeMax));
       }
       if (input?.poreSizeMin !== void 0) {
-        conditions.push(gte(products2.poreSizeNum, input.poreSizeMin));
+        conditions.push(gte(products3.poreSizeNum, input.poreSizeMin));
       }
       if (input?.poreSizeMax !== void 0) {
-        conditions.push(lte(products2.poreSizeNum, input.poreSizeMax));
+        conditions.push(lte(products3.poreSizeNum, input.poreSizeMax));
       }
       if (input?.columnLengthMin !== void 0) {
-        conditions.push(gte(products2.columnLengthNum, input.columnLengthMin));
+        conditions.push(gte(products3.columnLengthNum, input.columnLengthMin));
       }
       if (input?.columnLengthMax !== void 0) {
-        conditions.push(lte(products2.columnLengthNum, input.columnLengthMax));
+        conditions.push(lte(products3.columnLengthNum, input.columnLengthMax));
       }
       if (input?.innerDiameterMin !== void 0) {
-        conditions.push(gte(products2.innerDiameterNum, input.innerDiameterMin));
+        conditions.push(gte(products3.innerDiameterNum, input.innerDiameterMin));
       }
       if (input?.innerDiameterMax !== void 0) {
-        conditions.push(lte(products2.innerDiameterNum, input.innerDiameterMax));
+        conditions.push(lte(products3.innerDiameterNum, input.innerDiameterMax));
       }
       if (input?.phaseTypes && input.phaseTypes.length > 0) {
-        conditions.push(inArray(products2.phaseType, input.phaseTypes));
+        conditions.push(inArray(products3.phaseType, input.phaseTypes));
       }
       if (input?.phMin !== void 0) {
-        conditions.push(gte(products2.phMax, input.phMin));
+        conditions.push(gte(products3.phMax, input.phMin));
       }
       if (input?.phMax !== void 0) {
-        conditions.push(lte(products2.phMin, input.phMax));
+        conditions.push(lte(products3.phMin, input.phMax));
       }
       let query;
       let countQuery;
@@ -3445,11 +3414,11 @@ var appRouter = router({
       if (input?.categoryId) {
         const categoryCondition = eq6(productCategories2.categoryId, input.categoryId);
         const finalCondition = whereClause ? and4(categoryCondition, whereClause) : categoryCondition;
-        query = db.select({ product: products2 }).from(products2).innerJoin(productCategories2, eq6(products2.id, productCategories2.productId)).where(finalCondition).orderBy(products2.productName).limit(pageSize).offset(offset);
-        countQuery = db.select({ count: sql3`count(*)` }).from(products2).innerJoin(productCategories2, eq6(products2.id, productCategories2.productId)).where(finalCondition);
+        query = db.select({ product: products3 }).from(products3).innerJoin(productCategories2, eq6(products3.id, productCategories2.productId)).where(finalCondition).orderBy(products3.productName).limit(pageSize).offset(offset);
+        countQuery = db.select({ count: sql3`count(*)` }).from(products3).innerJoin(productCategories2, eq6(products3.id, productCategories2.productId)).where(finalCondition);
       } else {
-        query = db.select().from(products2).where(whereClause).orderBy(products2.productName).limit(pageSize).offset(offset);
-        countQuery = db.select({ count: sql3`count(*)` }).from(products2).where(whereClause);
+        query = db.select().from(products3).where(whereClause).orderBy(products3.productName).limit(pageSize).offset(offset);
+        countQuery = db.select({ count: sql3`count(*)` }).from(products3).where(whereClause);
       }
       const [productResults, countResults] = await Promise.all([
         query,
@@ -3469,8 +3438,8 @@ var appRouter = router({
     getById: publicProcedure.input(z2.number()).query(async ({ input }) => {
       const db = await getDb();
       if (!db) return null;
-      const { products: products2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const result = await db.select().from(products2).where(eq6(products2.id, input)).limit(1);
+      const { products: products3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const result = await db.select().from(products3).where(eq6(products3.id, input)).limit(1);
       return result[0] || null;
     }),
     byBrand: publicProcedure.input((val) => {
@@ -3485,12 +3454,12 @@ var appRouter = router({
     }).optional()).query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
-      const { products: products2, productCategories: productCategories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { products: products3, productCategories: productCategories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       let query;
       if (input?.categoryId) {
-        query = db.selectDistinct({ brand: products2.brand }).from(products2).innerJoin(productCategories2, eq6(products2.id, productCategories2.productId)).where(eq6(productCategories2.categoryId, input.categoryId)).orderBy(products2.brand);
+        query = db.selectDistinct({ brand: products3.brand }).from(products3).innerJoin(productCategories2, eq6(products3.id, productCategories2.productId)).where(eq6(productCategories2.categoryId, input.categoryId)).orderBy(products3.brand);
       } else {
-        query = db.selectDistinct({ brand: products2.brand }).from(products2).orderBy(products2.brand);
+        query = db.selectDistinct({ brand: products3.brand }).from(products3).orderBy(products3.brand);
       }
       const results = await query;
       return results.map((r) => r.brand);
@@ -3500,18 +3469,19 @@ var appRouter = router({
     }).optional()).query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
-      const { products: products2, productCategories: productCategories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { products: products3, productCategories: productCategories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { inArray } = await import("drizzle-orm");
       let query;
       if (input?.categoryId) {
         query = db.select({
-          brand: products2.brand,
-          count: sql3`count(distinct ${products2.id})`
-        }).from(products2).innerJoin(productCategories2, eq6(products2.id, productCategories2.productId)).where(eq6(productCategories2.categoryId, input.categoryId)).groupBy(products2.brand).orderBy(products2.brand);
+          brand: products3.brand,
+          count: sql3`count(distinct ${products3.id})`
+        }).from(products3).innerJoin(productCategories2, eq6(products3.id, productCategories2.productId)).where(eq6(productCategories2.categoryId, input.categoryId)).groupBy(products3.brand).orderBy(products3.brand);
       } else {
         query = db.select({
-          brand: products2.brand,
+          brand: products3.brand,
           count: sql3`count(*)`
-        }).from(products2).groupBy(products2.brand).orderBy(products2.brand);
+        }).from(products3).groupBy(products3.brand).orderBy(products3.brand);
       }
       const results = await query;
       return results.reduce((acc, r) => {
@@ -3655,14 +3625,14 @@ var appRouter = router({
       try {
         const { generateInquiryExcel: generateInquiryExcel2, sendInquiryEmail: sendInquiryEmail2, sendCustomerConfirmationEmail: sendCustomerConfirmationEmail2 } = await Promise.resolve().then(() => (init_inquiry_utils(), inquiry_utils_exports));
         const { getUserById: getUserById2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-        const { inquiryItems: inquiryItems2, products: products2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+        const { inquiryItems: inquiryItems2, products: products3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
         const inquiryWithItems = await db.select({
           id: inquiryItems2.id,
           productId: inquiryItems2.productId,
           quantity: inquiryItems2.quantity,
           notes: inquiryItems2.notes,
-          product: products2
-        }).from(inquiryItems2).leftJoin(products2, eq10(inquiryItems2.productId, products2.id)).where(eq10(inquiryItems2.inquiryId, inquiryId));
+          product: products3
+        }).from(inquiryItems2).leftJoin(products3, eq10(inquiryItems2.productId, products3.id)).where(eq10(inquiryItems2.inquiryId, inquiryId));
         const currentUser = await getUserById2(ctx.user.id);
         if (currentUser) {
           const excelBuffer = await generateInquiryExcel2(
@@ -3743,7 +3713,7 @@ var appRouter = router({
       }),
       // Get inquiry details with items
       getById: adminProcedure.input(z2.object({ inquiryId: z2.number() })).query(async ({ input }) => {
-        const { inquiries: inquiries2, inquiryItems: inquiryItems2, products: products2, users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+        const { inquiries: inquiries2, inquiryItems: inquiryItems2, products: products3, users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
         const db = await getDb();
         if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
         const inquiry = await db.select({
@@ -3759,8 +3729,8 @@ var appRouter = router({
           quantity: inquiryItems2.quantity,
           notes: inquiryItems2.notes,
           quotedPrice: inquiryItems2.quotedPrice,
-          product: products2
-        }).from(inquiryItems2).leftJoin(products2, eq6(inquiryItems2.productId, products2.id)).where(eq6(inquiryItems2.inquiryId, input.inquiryId));
+          product: products3
+        }).from(inquiryItems2).leftJoin(products3, eq6(inquiryItems2.productId, products3.id)).where(eq6(inquiryItems2.inquiryId, input.inquiryId));
         return {
           inquiry: inquiry[0].inquiry,
           user: inquiry[0].user,
@@ -3801,7 +3771,7 @@ var appRouter = router({
       }),
       // Generate PDF quotation
       generatePDF: adminProcedure.input(z2.object({ inquiryId: z2.number() })).mutation(async ({ input }) => {
-        const { inquiries: inquiries2, inquiryItems: inquiryItems2, products: products2, users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+        const { inquiries: inquiries2, inquiryItems: inquiryItems2, products: products3, users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
         const db = await getDb();
         if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
         const inquiry = await db.select({
@@ -3812,11 +3782,11 @@ var appRouter = router({
           throw new TRPCError4({ code: "NOT_FOUND", message: "Inquiry not found" });
         }
         const items = await db.select({
-          product: products2,
+          product: products3,
           quantity: inquiryItems2.quantity,
           notes: inquiryItems2.notes,
           quotedPrice: inquiryItems2.quotedPrice
-        }).from(inquiryItems2).leftJoin(products2, eq6(inquiryItems2.productId, products2.id)).where(eq6(inquiryItems2.inquiryId, input.inquiryId));
+        }).from(inquiryItems2).leftJoin(products3, eq6(inquiryItems2.productId, products3.id)).where(eq6(inquiryItems2.inquiryId, input.inquiryId));
         const { generateInquiryPDF: generateInquiryPDF2 } = await Promise.resolve().then(() => (init_pdf_utils(), pdf_utils_exports));
         const pdfBuffer = await generateInquiryPDF2({
           inquiry: inquiry[0].inquiry,
@@ -3940,17 +3910,17 @@ var appRouter = router({
           limit: z2.number().min(1).max(50).default(10)
         })
       ).query(async ({ input }) => {
-        const { inquiryItems: inquiryItems2, products: products2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+        const { inquiryItems: inquiryItems2, products: products3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
         const db = await getDb();
         if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
         const topProducts = await db.select({
-          productId: products2.id,
-          productName: products2.productName,
-          brand: products2.brand,
-          partNumber: products2.partNumber,
+          productId: products3.id,
+          productName: products3.productName,
+          brand: products3.brand,
+          partNumber: products3.partNumber,
           count: sql3`count(*)`,
           totalQuantity: sql3`sum(${inquiryItems2.quantity})`
-        }).from(inquiryItems2).leftJoin(products2, eq6(inquiryItems2.productId, products2.id)).groupBy(products2.id, products2.productName, products2.brand, products2.partNumber).orderBy(desc4(sql3`count(*)`)).limit(input.limit);
+        }).from(inquiryItems2).leftJoin(products3, eq6(inquiryItems2.productId, products3.id)).groupBy(products3.id, products3.productName, products3.brand, products3.partNumber).orderBy(desc4(sql3`count(*)`)).limit(input.limit);
         return topProducts.map((p) => ({
           productId: p.productId,
           productName: p.productName,
@@ -4024,6 +3994,105 @@ var appRouter = router({
           throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Failed to send monthly report" });
         }
         return { success: true, message: `Monthly report for ${year}-${month} sent successfully` };
+      })
+    }),
+    // 图片同步管理
+    imageSync: router({
+      // 同步图片从crawler_results到products
+      sync: adminProcedure.mutation(async () => {
+        const { products: products3, crawlerResults } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+        const db = await getDb();
+        if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        const startTime = Date.now();
+        const crawlerImages = await db.select({
+          productId: crawlerResults.productId,
+          imageUrl: crawlerResults.imageUrl,
+          brand: crawlerResults.brand,
+          partNumber: crawlerResults.partNumber
+        }).from(crawlerResults).where(
+          and4(
+            isNotNull(crawlerResults.imageUrl),
+            ne(crawlerResults.imageUrl, ""),
+            like(crawlerResults.imageUrl, "%cdninstagram.com%")
+          )
+        );
+        let successCount = 0;
+        let failedCount = 0;
+        const failedProducts = [];
+        for (const item of crawlerImages) {
+          try {
+            const existingProduct = await db.select({ id: products3.id, imageUrl: products3.imageUrl }).from(products3).where(eq6(products3.productId, item.productId)).limit(1);
+            if (existingProduct.length > 0) {
+              await db.update(products3).set({
+                imageUrl: item.imageUrl,
+                updatedAt: /* @__PURE__ */ new Date()
+              }).where(eq6(products3.productId, item.productId));
+              successCount++;
+            } else {
+              failedCount++;
+              failedProducts.push({
+                productId: item.productId,
+                reason: "Product not found in products table"
+              });
+            }
+          } catch (error) {
+            failedCount++;
+            failedProducts.push({
+              productId: item.productId,
+              reason: error.message
+            });
+          }
+        }
+        const duration = Date.now() - startTime;
+        return {
+          success: true,
+          summary: {
+            totalFound: crawlerImages.length,
+            successCount,
+            failedCount,
+            duration: `${(duration / 1e3).toFixed(2)}s`
+          },
+          failedProducts: failedProducts.length > 0 ? failedProducts : void 0
+        };
+      }),
+      // 获取图片同步状态统计
+      status: adminProcedure.query(async () => {
+        const { products: products3, crawlerResults } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+        const db = await getDb();
+        if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+        const crawlerCount = await db.select({ count: sql3`count(*)` }).from(crawlerResults).where(
+          and4(
+            isNotNull(crawlerResults.imageUrl),
+            ne(crawlerResults.imageUrl, ""),
+            like(crawlerResults.imageUrl, "%cdninstagram.com%")
+          )
+        );
+        const productsCount = await db.select({ count: sql3`count(*)` }).from(products3).where(
+          and4(
+            isNotNull(products3.imageUrl),
+            like(products3.imageUrl, "%cdninstagram.com%")
+          )
+        );
+        const productsWithAnyImage = await db.select({ count: sql3`count(*)` }).from(products3).where(
+          and4(
+            isNotNull(products3.imageUrl),
+            ne(products3.imageUrl, "")
+          )
+        );
+        const totalProducts = await db.select({ count: sql3`count(*)` }).from(products3);
+        return {
+          crawler: {
+            totalImages: Number(crawlerCount[0].count),
+            description: "\u5236\u56FE\u56E2\u961F\u5DF2\u4E0A\u4F20\u7684\u56FE\u7247\u6570\u91CF"
+          },
+          products: {
+            cdnInstagramImages: Number(productsCount[0].count),
+            totalWithImages: Number(productsWithAnyImage[0].count),
+            totalProducts: Number(totalProducts[0].count),
+            coverageRate: (Number(productsWithAnyImage[0].count) / Number(totalProducts[0].count) * 100).toFixed(1) + "%"
+          },
+          needSync: Number(crawlerCount[0].count) - Number(productsCount[0].count)
+        };
       })
     })
   }),
@@ -4221,73 +4290,6 @@ var appRouter = router({
     listCategories: publicProcedure.query(async () => {
       return await listCategories();
     })
-  }),
-  // Admin: Batch update product images
-  admin: router({
-    // 批量更新产品图片URL
-    updateProductImages: adminProcedure.mutation(async () => {
-      const db = await getDb();
-      if (!db) {
-        throw new TRPCError4({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database not available"
-        });
-      }
-      const results = {
-        total: IMAGE_UPDATES.length,
-        updated: 0,
-        failed: 0,
-        errors: [],
-        details: []
-      };
-      for (const update of IMAGE_UPDATES) {
-        try {
-          const result = await db.update(products).set({ imageUrl: update.imageUrl }).where(eq6(products.productId, update.productId));
-          results.updated++;
-          results.details.push({
-            productId: update.productId,
-            status: "success"
-          });
-        } catch (error) {
-          results.failed++;
-          const errorMsg = error instanceof Error ? error.message : "Unknown error";
-          results.errors.push(`Failed to update ${update.productId}: ${errorMsg}`);
-          results.details.push({
-            productId: update.productId,
-            status: `failed: ${errorMsg}`
-          });
-        }
-      }
-      return results;
-    }),
-    // 验证更新结果
-    verifyImageUpdates: adminProcedure.query(async () => {
-      const db = await getDb();
-      if (!db) {
-        throw new TRPCError4({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database not available"
-        });
-      }
-      const productIds = IMAGE_UPDATES.map((u) => u.productId);
-      const updatedProducts = await db.select({
-        id: products.id,
-        productId: products.productId,
-        name: products.productName,
-        imageUrl: products.imageUrl
-      }).from(products).where(
-        sql3`${products.productId} IN (${sql3.join(productIds.map((id) => sql3`${id}`), sql3`, `)})`
-      );
-      const withImages = updatedProducts.filter((p) => p.imageUrl && p.imageUrl.trim() !== "");
-      const withoutImages = updatedProducts.filter((p) => !p.imageUrl || p.imageUrl.trim() === "");
-      return {
-        total: IMAGE_UPDATES.length,
-        found: updatedProducts.length,
-        withImages: withImages.length,
-        withoutImages: withoutImages.length,
-        products: updatedProducts
-      };
-    })
   })
 });
 
@@ -4315,13 +4317,10 @@ import path2 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
-import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
-import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig } from "vite";
-import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
-var plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()];
+var plugins = [react()];
 var vite_config_default = defineConfig({
   plugins,
   resolve: {
