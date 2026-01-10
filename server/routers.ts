@@ -1432,6 +1432,151 @@ export const appRouter = router({
           return { success: true, message: `Monthly report for ${year}-${month} sent successfully` };
         }),
     }),
+
+    // 图片同步管理
+    imageSync: router({
+      // 同步图片从crawler_results到products
+      sync: adminProcedure
+        .mutation(async () => {
+          const { products, crawlerResults } = await import("../drizzle/schema");
+          const db = await getDb();
+          if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+          const startTime = Date.now();
+
+          // 1. 从crawler_results获取所有有图片的记录
+          const crawlerImages = await db
+            .select({
+              productId: crawlerResults.productId,
+              imageUrl: crawlerResults.imageUrl,
+              brand: crawlerResults.brand,
+              partNumber: crawlerResults.partNumber,
+            })
+            .from(crawlerResults)
+            .where(
+              and(
+                isNotNull(crawlerResults.imageUrl),
+                ne(crawlerResults.imageUrl, ''),
+                like(crawlerResults.imageUrl, '%cdninstagram.com%')
+              )
+            );
+
+          let successCount = 0;
+          let failedCount = 0;
+          const failedProducts: any[] = [];
+
+          // 2. 逐个更新到products表
+          for (const item of crawlerImages) {
+            try {
+              // 检查products表中是否存在该产品
+              const existingProduct = await db
+                .select({ id: products.id, imageUrl: products.imageUrl })
+                .from(products)
+                .where(eq(products.productId, item.productId))
+                .limit(1);
+
+              if (existingProduct.length > 0) {
+                // 更新imageUrl
+                await db
+                  .update(products)
+                  .set({ 
+                    imageUrl: item.imageUrl,
+                    updatedAt: new Date()
+                  })
+                  .where(eq(products.productId, item.productId));
+                
+                successCount++;
+              } else {
+                failedCount++;
+                failedProducts.push({
+                  productId: item.productId,
+                  reason: 'Product not found in products table'
+                });
+              }
+            } catch (error: any) {
+              failedCount++;
+              failedProducts.push({
+                productId: item.productId,
+                reason: error.message
+              });
+            }
+          }
+
+          const duration = Date.now() - startTime;
+
+          return {
+            success: true,
+            summary: {
+              totalFound: crawlerImages.length,
+              successCount,
+              failedCount,
+              duration: `${(duration / 1000).toFixed(2)}s`
+            },
+            failedProducts: failedProducts.length > 0 ? failedProducts : undefined
+          };
+        }),
+
+      // 获取图片同步状态统计
+      status: adminProcedure
+        .query(async () => {
+          const { products, crawlerResults } = await import("../drizzle/schema");
+          const db = await getDb();
+          if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+
+          // 统计crawler_results中的图片数量
+          const crawlerCount = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(crawlerResults)
+            .where(
+              and(
+                isNotNull(crawlerResults.imageUrl),
+                ne(crawlerResults.imageUrl, ''),
+                like(crawlerResults.imageUrl, '%cdninstagram.com%')
+              )
+            );
+
+          // 统计products中已有cdninstagram图片的数量
+          const productsCount = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(products)
+            .where(
+              and(
+                isNotNull(products.imageUrl),
+                like(products.imageUrl, '%cdninstagram.com%')
+              )
+            );
+
+          // 统计products中所有有图片的数量
+          const productsWithAnyImage = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(products)
+            .where(
+              and(
+                isNotNull(products.imageUrl),
+                ne(products.imageUrl, '')
+              )
+            );
+
+          // 统计products总数
+          const totalProducts = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(products);
+
+          return {
+            crawler: {
+              totalImages: Number(crawlerCount[0].count),
+              description: '制图团队已上传的图片数量'
+            },
+            products: {
+              cdnInstagramImages: Number(productsCount[0].count),
+              totalWithImages: Number(productsWithAnyImage[0].count),
+              totalProducts: Number(totalProducts[0].count),
+              coverageRate: (Number(productsWithAnyImage[0].count) / Number(totalProducts[0].count) * 100).toFixed(1) + '%'
+            },
+            needSync: Number(crawlerCount[0].count) - Number(productsCount[0].count)
+          };
+        }),
+    }),
   }),
 
   // Resources Center Router
@@ -1773,4 +1918,5 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
 
