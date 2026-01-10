@@ -719,7 +719,7 @@ async function getCartByUserId(userId) {
     return [];
   }
   const { cart: cart2, products: products3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  const { eq: eq10 } = await import("drizzle-orm");
+  const { eq: eq11 } = await import("drizzle-orm");
   const result = await db.select({
     id: cart2.id,
     userId: cart2.userId,
@@ -729,7 +729,7 @@ async function getCartByUserId(userId) {
     createdAt: cart2.createdAt,
     updatedAt: cart2.updatedAt,
     product: products3
-  }).from(cart2).leftJoin(products3, eq10(cart2.productId, products3.id)).where(eq10(cart2.userId, userId));
+  }).from(cart2).leftJoin(products3, eq11(cart2.productId, products3.id)).where(eq11(cart2.userId, userId));
   return result;
 }
 async function addToCart(userId, productId, quantity = 1, notes) {
@@ -739,13 +739,13 @@ async function addToCart(userId, productId, quantity = 1, notes) {
     return void 0;
   }
   const { cart: cart2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  const { eq: eq10, and: and5 } = await import("drizzle-orm");
-  const existing = await db.select().from(cart2).where(and5(eq10(cart2.userId, userId), eq10(cart2.productId, productId))).limit(1);
+  const { eq: eq11, and: and5 } = await import("drizzle-orm");
+  const existing = await db.select().from(cart2).where(and5(eq11(cart2.userId, userId), eq11(cart2.productId, productId))).limit(1);
   if (existing.length > 0) {
     await db.update(cart2).set({
       quantity: existing[0].quantity + quantity,
       notes: notes || existing[0].notes
-    }).where(eq10(cart2.id, existing[0].id));
+    }).where(eq11(cart2.id, existing[0].id));
     return existing[0].id;
   } else {
     const result = await db.insert(cart2).values({
@@ -764,11 +764,11 @@ async function updateCartItem(cartId, quantity, notes) {
     return;
   }
   const { cart: cart2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  const { eq: eq10 } = await import("drizzle-orm");
+  const { eq: eq11 } = await import("drizzle-orm");
   await db.update(cart2).set({
     quantity,
     notes: notes || null
-  }).where(eq10(cart2.id, cartId));
+  }).where(eq11(cart2.id, cartId));
 }
 async function removeFromCart(cartId) {
   const db = await getDb();
@@ -777,8 +777,8 @@ async function removeFromCart(cartId) {
     return;
   }
   const { cart: cart2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  const { eq: eq10 } = await import("drizzle-orm");
-  await db.delete(cart2).where(eq10(cart2.id, cartId));
+  const { eq: eq11 } = await import("drizzle-orm");
+  await db.delete(cart2).where(eq11(cart2.id, cartId));
 }
 async function clearCart(userId) {
   const db = await getDb();
@@ -787,8 +787,8 @@ async function clearCart(userId) {
     return;
   }
   const { cart: cart2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  const { eq: eq10 } = await import("drizzle-orm");
-  await db.delete(cart2).where(eq10(cart2.userId, userId));
+  const { eq: eq11 } = await import("drizzle-orm");
+  await db.delete(cart2).where(eq11(cart2.userId, userId));
 }
 async function createInquiry(inquiryData) {
   const db = await getDb();
@@ -824,7 +824,7 @@ async function addInquiryItems(inquiryId, items) {
     return;
   }
   const { inquiryItems: inquiryItems2, inquiries: inquiries2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  const { eq: eq10 } = await import("drizzle-orm");
+  const { eq: eq11 } = await import("drizzle-orm");
   await db.insert(inquiryItems2).values(
     items.map((item) => ({
       inquiryId,
@@ -833,7 +833,7 @@ async function addInquiryItems(inquiryId, items) {
       notes: item.notes || null
     }))
   );
-  await db.update(inquiries2).set({ totalItems: items.length }).where(eq10(inquiries2.id, inquiryId));
+  await db.update(inquiries2).set({ totalItems: items.length }).where(eq11(inquiries2.id, inquiryId));
 }
 async function getInquiriesByUserId(userId) {
   const db = await getDb();
@@ -842,8 +842,8 @@ async function getInquiriesByUserId(userId) {
     return [];
   }
   const { inquiries: inquiries2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  const { eq: eq10, desc: desc5 } = await import("drizzle-orm");
-  const result = await db.select().from(inquiries2).where(eq10(inquiries2.userId, userId)).orderBy(desc5(inquiries2.createdAt));
+  const { eq: eq11, desc: desc5 } = await import("drizzle-orm");
+  const result = await db.select().from(inquiries2).where(eq11(inquiries2.userId, userId)).orderBy(desc5(inquiries2.createdAt));
   return result;
 }
 async function getInquiryById(inquiryId) {
@@ -853,8 +853,8 @@ async function getInquiryById(inquiryId) {
     return void 0;
   }
   const { inquiries: inquiries2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  const { eq: eq10 } = await import("drizzle-orm");
-  const result = await db.select().from(inquiries2).where(eq10(inquiries2.id, inquiryId)).limit(1);
+  const { eq: eq11 } = await import("drizzle-orm");
+  const result = await db.select().from(inquiries2).where(eq11(inquiries2.id, inquiryId)).limit(1);
   return result.length > 0 ? result[0] : void 0;
 }
 async function getInquiryItems(inquiryId) {
@@ -864,7 +864,7 @@ async function getInquiryItems(inquiryId) {
     return [];
   }
   const { inquiryItems: inquiryItems2, products: products3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-  const { eq: eq10 } = await import("drizzle-orm");
+  const { eq: eq11 } = await import("drizzle-orm");
   const result = await db.select({
     id: inquiryItems2.id,
     inquiryId: inquiryItems2.inquiryId,
@@ -874,7 +874,7 @@ async function getInquiryItems(inquiryId) {
     quotedPrice: inquiryItems2.quotedPrice,
     createdAt: inquiryItems2.createdAt,
     product: products3
-  }).from(inquiryItems2).leftJoin(products3, eq10(inquiryItems2.productId, products3.id)).where(eq10(inquiryItems2.inquiryId, inquiryId));
+  }).from(inquiryItems2).leftJoin(products3, eq11(inquiryItems2.productId, products3.id)).where(eq11(inquiryItems2.inquiryId, inquiryId));
   return result;
 }
 async function updateUserConsent(userId, consentMode) {
@@ -1536,7 +1536,7 @@ __export(monthly_report_exports, {
   sendMonthlyReport: () => sendMonthlyReport
 });
 import ExcelJS2 from "exceljs";
-import { sql as sql2, eq as eq5, and as and3, desc as desc3 } from "drizzle-orm";
+import { sql as sql2, eq as eq6, and as and3, desc as desc3 } from "drizzle-orm";
 async function generateMonthlyReport(year, month) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -1556,7 +1556,7 @@ async function generateMonthlyReport(year, month) {
     sql2`${inquiries2.createdAt} <= ${endDate.toISOString()}`
   )).groupBy(inquiries2.status);
   const newCustomersResult = await db.select({ count: sql2`count(*)` }).from(users2).where(and3(
-    eq5(users2.role, "user"),
+    eq6(users2.role, "user"),
     sql2`${users2.createdAt} >= ${startDate.toISOString()}`,
     sql2`${users2.createdAt} <= ${endDate.toISOString()}`
   ));
@@ -1566,7 +1566,7 @@ async function generateMonthlyReport(year, month) {
     brand: products3.brand,
     partNumber: products3.partNumber,
     count: sql2`count(*)`
-  }).from(inquiryItems2).leftJoin(products3, eq5(inquiryItems2.productId, products3.id)).leftJoin(inquiries2, eq5(inquiryItems2.inquiryId, inquiries2.id)).where(and3(
+  }).from(inquiryItems2).leftJoin(products3, eq6(inquiryItems2.productId, products3.id)).leftJoin(inquiries2, eq6(inquiryItems2.inquiryId, inquiries2.id)).where(and3(
     sql2`${inquiries2.createdAt} >= ${startDate.toISOString()}`,
     sql2`${inquiries2.createdAt} <= ${endDate.toISOString()}`
   )).groupBy(products3.id, products3.name, products3.brand, products3.partNumber).orderBy(desc3(sql2`count(*)`)).limit(10);
@@ -1758,6 +1758,7 @@ var init_monthly_report = __esm({
 // server/_core/index.ts
 import "dotenv/config";
 import express2 from "express";
+import bodyParser from "body-parser";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -1825,12 +1826,148 @@ function registerOAuthRoutes(app) {
   });
 }
 
+// server/_core/imageSync.ts
+init_db();
+import { eq as eq2 } from "drizzle-orm";
+function registerImageSyncRoutes(app) {
+  app.post("/api/admin/imageSync", async (req, res) => {
+    try {
+      const startTime = Date.now();
+      let csvText = "";
+      if (req.is("text/csv") || req.is("text/plain")) {
+        csvText = req.body;
+      } else if (typeof req.body === "string") {
+        csvText = req.body;
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid content type. Please send CSV data with Content-Type: text/csv"
+        });
+      }
+      const lines = csvText.trim().split("\n");
+      if (lines.length < 2) {
+        return res.status(400).json({
+          success: false,
+          error: "CSV file must contain header and at least one data row"
+        });
+      }
+      const header = lines[0].trim().toLowerCase();
+      if (!header.includes("partnumber") || !header.includes("imageurl")) {
+        return res.status(400).json({
+          success: false,
+          error: 'CSV header must contain "partNumber" and "imageUrl" columns'
+        });
+      }
+      const updates = [];
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const parts = line.split(",");
+        if (parts.length >= 2) {
+          updates.push({
+            partNumber: parts[0].trim(),
+            imageUrl: parts[1].trim()
+          });
+        }
+      }
+      if (updates.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: "No valid data rows found in CSV"
+        });
+      }
+      const { products: products3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({
+          success: false,
+          error: "Database not available"
+        });
+      }
+      let successCount = 0;
+      let failedCount = 0;
+      const failedProducts = [];
+      for (const item of updates) {
+        try {
+          const existingProduct = await db.select({ id: products3.id, productId: products3.productId }).from(products3).where(eq2(products3.partNumber, item.partNumber)).limit(1);
+          if (existingProduct.length > 0) {
+            await db.update(products3).set({
+              imageUrl: item.imageUrl,
+              updatedAt: /* @__PURE__ */ new Date()
+            }).where(eq2(products3.partNumber, item.partNumber));
+            successCount++;
+          } else {
+            failedCount++;
+            failedProducts.push({
+              partNumber: item.partNumber,
+              reason: "Product not found"
+            });
+          }
+        } catch (error) {
+          failedCount++;
+          failedProducts.push({
+            partNumber: item.partNumber,
+            reason: error.message
+          });
+        }
+      }
+      const duration = Date.now() - startTime;
+      return res.json({
+        success: true,
+        summary: {
+          totalRows: updates.length,
+          successCount,
+          failedCount,
+          duration: `${(duration / 1e3).toFixed(2)}s`
+        },
+        failedProducts: failedProducts.length > 0 ? failedProducts : void 0
+      });
+    } catch (error) {
+      console.error("ImageSync API error:", error);
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+  app.get("/api/admin/imageSync/status", async (req, res) => {
+    try {
+      const { products: products3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({
+          success: false,
+          error: "Database not available"
+        });
+      }
+      const productsWithImages = await db.select().from(products3).where(eq2(products3.imageUrl, ""));
+      const totalProducts = await db.select().from(products3);
+      const withImages = totalProducts.length - productsWithImages.length;
+      return res.json({
+        success: true,
+        stats: {
+          totalProducts: totalProducts.length,
+          withImages,
+          withoutImages: productsWithImages.length,
+          coverageRate: (withImages / totalProducts.length * 100).toFixed(1) + "%"
+        }
+      });
+    } catch (error) {
+      console.error("ImageSync status API error:", error);
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+}
+
 // server/routers.ts
 init_const();
 init_db();
 import { TRPCError as TRPCError4 } from "@trpc/server";
 import { z as z2 } from "zod";
-import { eq as eq6, desc as desc4, and as and4, sql as sql3 } from "drizzle-orm";
+import { eq as eq7, desc as desc4, and as and4, sql as sql3 } from "drizzle-orm";
 
 // server/_core/systemRouter.ts
 import { z } from "zod";
@@ -1981,7 +2118,7 @@ var systemRouter = router({
 init_db();
 init_schema();
 import { TRPCError as TRPCError3 } from "@trpc/server";
-import { eq as eq2 } from "drizzle-orm";
+import { eq as eq3 } from "drizzle-orm";
 import crypto from "crypto";
 async function verifyAPIKey(authHeader) {
   if (!authHeader) {
@@ -2003,7 +2140,7 @@ async function verifyAPIKey(authHeader) {
       message: "Database not available"
     });
   }
-  const result = await db.select().from(apiKeys).where(eq2(apiKeys.keyHash, keyHash)).limit(1);
+  const result = await db.select().from(apiKeys).where(eq3(apiKeys.keyHash, keyHash)).limit(1);
   if (result.length === 0) {
     return null;
   }
@@ -2020,7 +2157,7 @@ async function verifyAPIKey(authHeader) {
       message: "API key has expired"
     });
   }
-  db.update(apiKeys).set({ lastUsedAt: /* @__PURE__ */ new Date() }).where(eq2(apiKeys.id, key.id)).execute().catch((err) => console.error("[API Key] Failed to update lastUsedAt:", err));
+  db.update(apiKeys).set({ lastUsedAt: /* @__PURE__ */ new Date() }).where(eq3(apiKeys.id, key.id)).execute().catch((err) => console.error("[API Key] Failed to update lastUsedAt:", err));
   const permissions = key.permissions.split(",").map((p) => p.trim());
   return {
     keyId: key.id,
@@ -2580,7 +2717,7 @@ function isPricingInquiry(message) {
 }
 
 // server/ai/chat-handler.ts
-import { eq as eq3, and, gt, desc } from "drizzle-orm";
+import { eq as eq4, and, gt, desc } from "drizzle-orm";
 var AIRequestQueue = class {
   queue = [];
   running = 0;
@@ -2637,11 +2774,11 @@ async function checkCache(question) {
     const cacheKey = generateCacheKey(question);
     const now = /* @__PURE__ */ new Date();
     const cached = await db.select().from(aiCache).where(and(
-      eq3(aiCache.questionHash, cacheKey),
+      eq4(aiCache.questionHash, cacheKey),
       gt(aiCache.expiresAt, now)
     )).limit(1);
     if (cached.length > 0) {
-      await db.update(aiCache).set({ hitCount: cached[0].hitCount + 1 }).where(eq3(aiCache.id, cached[0].id));
+      await db.update(aiCache).set({ hitCount: cached[0].hitCount + 1 }).where(eq4(aiCache.id, cached[0].id));
       console.log("[AI Cache] Cache hit for question:", question.substring(0, 50));
       return cached[0].answer;
     }
@@ -2684,7 +2821,7 @@ async function getConversationHistory(conversationId, limit = 10) {
   try {
     const db = await getDb();
     if (!db) return [];
-    const messages = await db.select().from(aiMessages).where(eq3(aiMessages.conversationId, conversationId)).orderBy(desc(aiMessages.createdAt)).limit(limit);
+    const messages = await db.select().from(aiMessages).where(eq4(aiMessages.conversationId, conversationId)).orderBy(desc(aiMessages.createdAt)).limit(limit);
     return messages.reverse().map((msg) => {
       let content = msg.content || "";
       if (msg.contentEncrypted) {
@@ -2778,7 +2915,7 @@ async function handleAIChat(user, message, sessionId) {
         if (!sessionId) {
           sessionId = generateSessionId();
         }
-        const existingConv = await db.select().from(aiConversations).where(eq3(aiConversations.sessionId, sessionId)).limit(1);
+        const existingConv = await db.select().from(aiConversations).where(eq4(aiConversations.sessionId, sessionId)).limit(1);
         if (existingConv.length > 0) {
           conversationId = existingConv[0].id;
           consentMode = existingConv[0].consentMode;
@@ -2847,7 +2984,7 @@ init_schema();
 // server/db-resources.ts
 init_db();
 init_schema();
-import { eq as eq4, desc as desc2, and as and2, sql } from "drizzle-orm";
+import { eq as eq5, desc as desc2, and as and2, sql } from "drizzle-orm";
 import slugify from "slugify";
 function generateSlug(title) {
   return slugify(title, {
@@ -2869,7 +3006,7 @@ async function ensureUniqueSlug(baseSlug, excludeId) {
   while (true) {
     const existing = await db.select({ id: resources.id }).from(resources).where(
       and2(
-        eq4(resources.slug, slug),
+        eq5(resources.slug, slug),
         excludeId ? sql`${resources.id} != ${excludeId}` : void 0
       )
     ).limit(1);
@@ -2903,7 +3040,7 @@ async function createResource(data) {
   if (data.tags && data.tags.length > 0) {
     for (const tagName of data.tags) {
       const tagSlug = generateSlug(tagName);
-      let tag = await db.select().from(resourceTags).where(eq4(resourceTags.slug, tagSlug)).limit(1);
+      let tag = await db.select().from(resourceTags).where(eq5(resourceTags.slug, tagSlug)).limit(1);
       let tagId;
       if (tag.length === 0) {
         const tagResult = await db.insert(resourceTags).values({
@@ -2938,7 +3075,7 @@ async function updateResource(id, data) {
   if (data.status !== void 0) {
     updateData.status = data.status;
     if (data.status === "published") {
-      const existing = await db.select({ publishedAt: resources.publishedAt }).from(resources).where(eq4(resources.id, id)).limit(1);
+      const existing = await db.select({ publishedAt: resources.publishedAt }).from(resources).where(eq5(resources.id, id)).limit(1);
       if (existing.length > 0 && !existing[0].publishedAt) {
         updateData.publishedAt = /* @__PURE__ */ new Date();
       }
@@ -2948,12 +3085,12 @@ async function updateResource(id, data) {
   if (data.categoryId !== void 0) updateData.categoryId = data.categoryId;
   if (data.featured !== void 0) updateData.featured = data.featured ? 1 : 0;
   if (data.publishedAt !== void 0) updateData.publishedAt = data.publishedAt;
-  await db.update(resources).set(updateData).where(eq4(resources.id, id));
+  await db.update(resources).set(updateData).where(eq5(resources.id, id));
   if (data.tags !== void 0) {
-    await db.delete(resourcePostTags).where(eq4(resourcePostTags.postId, id));
+    await db.delete(resourcePostTags).where(eq5(resourcePostTags.postId, id));
     for (const tagName of data.tags) {
       const tagSlug = generateSlug(tagName);
-      let tag = await db.select().from(resourceTags).where(eq4(resourceTags.slug, tagSlug)).limit(1);
+      let tag = await db.select().from(resourceTags).where(eq5(resourceTags.slug, tagSlug)).limit(1);
       let tagId;
       if (tag.length === 0) {
         const tagResult = await db.insert(resourceTags).values({
@@ -2975,17 +3112,17 @@ async function updateResource(id, data) {
 async function getResourceBySlug(slug) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.select().from(resources).where(eq4(resources.slug, slug)).limit(1);
+  const result = await db.select().from(resources).where(eq5(resources.slug, slug)).limit(1);
   if (result.length === 0) return null;
   const resource = result[0];
   const tags = await db.select({
     id: resourceTags.id,
     name: resourceTags.name,
     slug: resourceTags.slug
-  }).from(resourcePostTags).innerJoin(resourceTags, eq4(resourcePostTags.tagId, resourceTags.id)).where(eq4(resourcePostTags.postId, resource.id));
+  }).from(resourcePostTags).innerJoin(resourceTags, eq5(resourcePostTags.tagId, resourceTags.id)).where(eq5(resourcePostTags.postId, resource.id));
   let category = null;
   if (resource.categoryId) {
-    const categoryResult = await db.select().from(resourceCategories).where(eq4(resourceCategories.id, resource.categoryId)).limit(1);
+    const categoryResult = await db.select().from(resourceCategories).where(eq5(resourceCategories.id, resource.categoryId)).limit(1);
     if (categoryResult.length > 0) {
       category = categoryResult[0];
     }
@@ -3004,16 +3141,16 @@ async function listResources(options) {
   const offset = (page - 1) * pageSize;
   const conditions = [];
   if (options.status) {
-    conditions.push(eq4(resources.status, options.status));
+    conditions.push(eq5(resources.status, options.status));
   }
   if (options.categoryId) {
-    conditions.push(eq4(resources.categoryId, options.categoryId));
+    conditions.push(eq5(resources.categoryId, options.categoryId));
   }
   if (options.featured !== void 0) {
-    conditions.push(eq4(resources.featured, options.featured ? 1 : 0));
+    conditions.push(eq5(resources.featured, options.featured ? 1 : 0));
   }
   if (options.language) {
-    conditions.push(eq4(resources.language, options.language));
+    conditions.push(eq5(resources.language, options.language));
   }
   if (options.search) {
     conditions.push(
@@ -3035,13 +3172,13 @@ async function listResources(options) {
 async function incrementViewCount(id) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(resources).set({ viewCount: sql`${resources.viewCount} + 1` }).where(eq4(resources.id, id));
+  await db.update(resources).set({ viewCount: sql`${resources.viewCount} + 1` }).where(eq5(resources.id, id));
 }
 async function getOrCreateCategory(name, description) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const slug = generateSlug(name);
-  const existing = await db.select().from(resourceCategories).where(eq4(resourceCategories.slug, slug)).limit(1);
+  const existing = await db.select().from(resourceCategories).where(eq5(resourceCategories.slug, slug)).limit(1);
   if (existing.length > 0) {
     return existing[0];
   }
@@ -3093,7 +3230,7 @@ var appRouter = router({
       if (!db) {
         throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       }
-      await db.update(aiMessages).set({ feedback: input.feedback }).where(eq6(aiMessages.id, input.messageId));
+      await db.update(aiMessages).set({ feedback: input.feedback }).where(eq7(aiMessages.id, input.messageId));
       return { success: true };
     }),
     // Get conversation history (for authenticated users)
@@ -3107,7 +3244,7 @@ var appRouter = router({
       if (!db) {
         throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
       }
-      const conversations = await db.select().from(aiConversations).where(eq6(aiConversations.userId, ctx.user.id)).orderBy(desc4(aiConversations.createdAt)).limit(input.limit || 10);
+      const conversations = await db.select().from(aiConversations).where(eq7(aiConversations.userId, ctx.user.id)).orderBy(desc4(aiConversations.createdAt)).limit(input.limit || 10);
       return conversations;
     }),
     // Delete conversation (self-service deletion)
@@ -3122,14 +3259,14 @@ var appRouter = router({
       }
       const conversation = await db.select().from(aiConversations).where(
         and4(
-          eq6(aiConversations.id, input.conversationId),
-          eq6(aiConversations.userId, ctx.user.id)
+          eq7(aiConversations.id, input.conversationId),
+          eq7(aiConversations.userId, ctx.user.id)
         )
       ).limit(1);
       if (conversation.length === 0) {
         throw new TRPCError4({ code: "NOT_FOUND", message: "Conversation not found" });
       }
-      await db.update(aiConversations).set({ isDeleted: 1 }).where(eq6(aiConversations.id, input.conversationId));
+      await db.update(aiConversations).set({ isDeleted: 1 }).where(eq7(aiConversations.id, input.conversationId));
       return { success: true };
     }),
     // Update consent mode
@@ -3371,7 +3508,7 @@ var appRouter = router({
       console.log("[products.list] Input params:", JSON.stringify(input, null, 2));
       const conditions = [];
       if (input?.brand) {
-        conditions.push(eq6(products3.brand, input.brand));
+        conditions.push(eq7(products3.brand, input.brand));
       }
       if (input?.particleSizeMin !== void 0) {
         conditions.push(gte(products3.particleSizeNum, input.particleSizeMin));
@@ -3412,10 +3549,10 @@ var appRouter = router({
       console.log("[products.list] Conditions count:", conditions.length);
       console.log("[products.list] Where clause:", whereClause);
       if (input?.categoryId) {
-        const categoryCondition = eq6(productCategories2.categoryId, input.categoryId);
+        const categoryCondition = eq7(productCategories2.categoryId, input.categoryId);
         const finalCondition = whereClause ? and4(categoryCondition, whereClause) : categoryCondition;
-        query = db.select({ product: products3 }).from(products3).innerJoin(productCategories2, eq6(products3.id, productCategories2.productId)).where(finalCondition).orderBy(products3.productName).limit(pageSize).offset(offset);
-        countQuery = db.select({ count: sql3`count(*)` }).from(products3).innerJoin(productCategories2, eq6(products3.id, productCategories2.productId)).where(finalCondition);
+        query = db.select({ product: products3 }).from(products3).innerJoin(productCategories2, eq7(products3.id, productCategories2.productId)).where(finalCondition).orderBy(products3.productName).limit(pageSize).offset(offset);
+        countQuery = db.select({ count: sql3`count(*)` }).from(products3).innerJoin(productCategories2, eq7(products3.id, productCategories2.productId)).where(finalCondition);
       } else {
         query = db.select().from(products3).where(whereClause).orderBy(products3.productName).limit(pageSize).offset(offset);
         countQuery = db.select({ count: sql3`count(*)` }).from(products3).where(whereClause);
@@ -3439,7 +3576,7 @@ var appRouter = router({
       const db = await getDb();
       if (!db) return null;
       const { products: products3 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const result = await db.select().from(products3).where(eq6(products3.id, input)).limit(1);
+      const result = await db.select().from(products3).where(eq7(products3.id, input)).limit(1);
       return result[0] || null;
     }),
     byBrand: publicProcedure.input((val) => {
@@ -3457,7 +3594,7 @@ var appRouter = router({
       const { products: products3, productCategories: productCategories2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       let query;
       if (input?.categoryId) {
-        query = db.selectDistinct({ brand: products3.brand }).from(products3).innerJoin(productCategories2, eq6(products3.id, productCategories2.productId)).where(eq6(productCategories2.categoryId, input.categoryId)).orderBy(products3.brand);
+        query = db.selectDistinct({ brand: products3.brand }).from(products3).innerJoin(productCategories2, eq7(products3.id, productCategories2.productId)).where(eq7(productCategories2.categoryId, input.categoryId)).orderBy(products3.brand);
       } else {
         query = db.selectDistinct({ brand: products3.brand }).from(products3).orderBy(products3.brand);
       }
@@ -3476,7 +3613,7 @@ var appRouter = router({
         query = db.select({
           brand: products3.brand,
           count: sql3`count(distinct ${products3.id})`
-        }).from(products3).innerJoin(productCategories2, eq6(products3.id, productCategories2.productId)).where(eq6(productCategories2.categoryId, input.categoryId)).groupBy(products3.brand).orderBy(products3.brand);
+        }).from(products3).innerJoin(productCategories2, eq7(products3.id, productCategories2.productId)).where(eq7(productCategories2.categoryId, input.categoryId)).groupBy(products3.brand).orderBy(products3.brand);
       } else {
         query = db.select({
           brand: products3.brand,
@@ -3606,8 +3743,8 @@ var appRouter = router({
         });
       }
       const { inquiries: inquiries2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq10 } = await import("drizzle-orm");
-      const inquiryRecord = await db.select().from(inquiries2).where(eq10(inquiries2.inquiryNumber, inquiry.inquiryNumber)).limit(1);
+      const { eq: eq11 } = await import("drizzle-orm");
+      const inquiryRecord = await db.select().from(inquiries2).where(eq11(inquiries2.inquiryNumber, inquiry.inquiryNumber)).limit(1);
       if (inquiryRecord.length === 0) {
         throw new TRPCError4({
           code: "INTERNAL_SERVER_ERROR",
@@ -3632,7 +3769,7 @@ var appRouter = router({
           quantity: inquiryItems2.quantity,
           notes: inquiryItems2.notes,
           product: products3
-        }).from(inquiryItems2).leftJoin(products3, eq10(inquiryItems2.productId, products3.id)).where(eq10(inquiryItems2.inquiryId, inquiryId));
+        }).from(inquiryItems2).leftJoin(products3, eq11(inquiryItems2.productId, products3.id)).where(eq11(inquiryItems2.inquiryId, inquiryId));
         const currentUser = await getUserById2(ctx.user.id);
         if (currentUser) {
           const excelBuffer = await generateInquiryExcel2(
@@ -3702,12 +3839,12 @@ var appRouter = router({
           userName: users2.name,
           userEmail: users2.email,
           userCompany: users2.company
-        }).from(inquiries2).leftJoin(users2, eq6(inquiries2.userId, users2.id)).orderBy(desc4(inquiries2.createdAt)).limit(input.limit).offset(input.offset);
+        }).from(inquiries2).leftJoin(users2, eq7(inquiries2.userId, users2.id)).orderBy(desc4(inquiries2.createdAt)).limit(input.limit).offset(input.offset);
         if (input.status) {
-          query = query.where(eq6(inquiries2.status, input.status));
+          query = query.where(eq7(inquiries2.status, input.status));
         }
         if (input.urgency) {
-          query = query.where(eq6(inquiries2.urgency, input.urgency));
+          query = query.where(eq7(inquiries2.urgency, input.urgency));
         }
         return await query;
       }),
@@ -3719,7 +3856,7 @@ var appRouter = router({
         const inquiry = await db.select({
           inquiry: inquiries2,
           user: users2
-        }).from(inquiries2).leftJoin(users2, eq6(inquiries2.userId, users2.id)).where(eq6(inquiries2.id, input.inquiryId)).limit(1);
+        }).from(inquiries2).leftJoin(users2, eq7(inquiries2.userId, users2.id)).where(eq7(inquiries2.id, input.inquiryId)).limit(1);
         if (inquiry.length === 0) {
           throw new TRPCError4({ code: "NOT_FOUND", message: "Inquiry not found" });
         }
@@ -3730,7 +3867,7 @@ var appRouter = router({
           notes: inquiryItems2.notes,
           quotedPrice: inquiryItems2.quotedPrice,
           product: products3
-        }).from(inquiryItems2).leftJoin(products3, eq6(inquiryItems2.productId, products3.id)).where(eq6(inquiryItems2.inquiryId, input.inquiryId));
+        }).from(inquiryItems2).leftJoin(products3, eq7(inquiryItems2.productId, products3.id)).where(eq7(inquiryItems2.inquiryId, input.inquiryId));
         return {
           inquiry: inquiry[0].inquiry,
           user: inquiry[0].user,
@@ -3753,7 +3890,7 @@ var appRouter = router({
         } else if (input.status === "completed") {
           updateData.completedAt = /* @__PURE__ */ new Date();
         }
-        await db.update(inquiries2).set(updateData).where(eq6(inquiries2.id, input.inquiryId));
+        await db.update(inquiries2).set(updateData).where(eq7(inquiries2.id, input.inquiryId));
         return { success: true };
       }),
       // Add admin notes
@@ -3766,7 +3903,7 @@ var appRouter = router({
         const { inquiries: inquiries2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
         const db = await getDb();
         if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-        await db.update(inquiries2).set({ adminNotes: input.notes }).where(eq6(inquiries2.id, input.inquiryId));
+        await db.update(inquiries2).set({ adminNotes: input.notes }).where(eq7(inquiries2.id, input.inquiryId));
         return { success: true };
       }),
       // Generate PDF quotation
@@ -3777,7 +3914,7 @@ var appRouter = router({
         const inquiry = await db.select({
           inquiry: inquiries2,
           user: users2
-        }).from(inquiries2).leftJoin(users2, eq6(inquiries2.userId, users2.id)).where(eq6(inquiries2.id, input.inquiryId)).limit(1);
+        }).from(inquiries2).leftJoin(users2, eq7(inquiries2.userId, users2.id)).where(eq7(inquiries2.id, input.inquiryId)).limit(1);
         if (inquiry.length === 0) {
           throw new TRPCError4({ code: "NOT_FOUND", message: "Inquiry not found" });
         }
@@ -3786,7 +3923,7 @@ var appRouter = router({
           quantity: inquiryItems2.quantity,
           notes: inquiryItems2.notes,
           quotedPrice: inquiryItems2.quotedPrice
-        }).from(inquiryItems2).leftJoin(products3, eq6(inquiryItems2.productId, products3.id)).where(eq6(inquiryItems2.inquiryId, input.inquiryId));
+        }).from(inquiryItems2).leftJoin(products3, eq7(inquiryItems2.productId, products3.id)).where(eq7(inquiryItems2.inquiryId, input.inquiryId));
         const { generateInquiryPDF: generateInquiryPDF2 } = await Promise.resolve().then(() => (init_pdf_utils(), pdf_utils_exports));
         const pdfBuffer = await generateInquiryPDF2({
           inquiry: inquiry[0].inquiry,
@@ -3808,7 +3945,7 @@ var appRouter = router({
         const { inquiryItems: inquiryItems2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
         const db = await getDb();
         if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-        await db.update(inquiryItems2).set({ quotedPrice: input.quotedPrice }).where(eq6(inquiryItems2.id, input.inquiryItemId));
+        await db.update(inquiryItems2).set({ quotedPrice: input.quotedPrice }).where(eq7(inquiryItems2.id, input.inquiryItemId));
         return { success: true };
       })
     }),
@@ -3825,9 +3962,9 @@ var appRouter = router({
         const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
         const db = await getDb();
         if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-        const conditions = [eq6(users2.role, "user")];
+        const conditions = [eq7(users2.role, "user")];
         if (input.tier) {
-          conditions.push(eq6(users2.customerTier, input.tier));
+          conditions.push(eq7(users2.customerTier, input.tier));
         }
         return await db.select({
           id: users2.id,
@@ -3852,7 +3989,7 @@ var appRouter = router({
         const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
         const db = await getDb();
         if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-        await db.update(users2).set({ customerTier: input.tier }).where(eq6(users2.id, input.userId));
+        await db.update(users2).set({ customerTier: input.tier }).where(eq7(users2.id, input.userId));
         return { success: true };
       }),
       // Get customer inquiry history
@@ -3860,7 +3997,7 @@ var appRouter = router({
         const { inquiries: inquiries2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
         const db = await getDb();
         if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-        return await db.select().from(inquiries2).where(eq6(inquiries2.userId, input.userId)).orderBy(desc4(inquiries2.createdAt));
+        return await db.select().from(inquiries2).where(eq7(inquiries2.userId, input.userId)).orderBy(desc4(inquiries2.createdAt));
       })
     }),
     // Analytics
@@ -3920,7 +4057,7 @@ var appRouter = router({
           partNumber: products3.partNumber,
           count: sql3`count(*)`,
           totalQuantity: sql3`sum(${inquiryItems2.quantity})`
-        }).from(inquiryItems2).leftJoin(products3, eq6(inquiryItems2.productId, products3.id)).groupBy(products3.id, products3.productName, products3.brand, products3.partNumber).orderBy(desc4(sql3`count(*)`)).limit(input.limit);
+        }).from(inquiryItems2).leftJoin(products3, eq7(inquiryItems2.productId, products3.id)).groupBy(products3.id, products3.productName, products3.brand, products3.partNumber).orderBy(desc4(sql3`count(*)`)).limit(input.limit);
         return topProducts.map((p) => ({
           productId: p.productId,
           productName: p.productName,
@@ -3935,20 +4072,20 @@ var appRouter = router({
         const { users: users2, inquiries: inquiries2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
         const db = await getDb();
         if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-        const totalCustomersResult = await db.select({ count: sql3`count(*)` }).from(users2).where(eq6(users2.role, "user"));
+        const totalCustomersResult = await db.select({ count: sql3`count(*)` }).from(users2).where(eq7(users2.role, "user"));
         const totalCustomers = Number(totalCustomersResult[0]?.count || 0);
         const byTier = await db.select({
           tier: users2.customerTier,
           count: sql3`count(*)`
-        }).from(users2).where(eq6(users2.role, "user")).groupBy(users2.customerTier);
+        }).from(users2).where(eq7(users2.role, "user")).groupBy(users2.customerTier);
         const byCountry = await db.select({
           country: users2.country,
           count: sql3`count(*)`
-        }).from(users2).where(and4(eq6(users2.role, "user"), sql3`${users2.country} IS NOT NULL`)).groupBy(users2.country).orderBy(desc4(sql3`count(*)`)).limit(10);
+        }).from(users2).where(and4(eq7(users2.role, "user"), sql3`${users2.country} IS NOT NULL`)).groupBy(users2.country).orderBy(desc4(sql3`count(*)`)).limit(10);
         const byIndustry = await db.select({
           industry: users2.industry,
           count: sql3`count(*)`
-        }).from(users2).where(and4(eq6(users2.role, "user"), sql3`${users2.industry} IS NOT NULL`)).groupBy(users2.industry).orderBy(desc4(sql3`count(*)`)).limit(10);
+        }).from(users2).where(and4(eq7(users2.role, "user"), sql3`${users2.industry} IS NOT NULL`)).groupBy(users2.industry).orderBy(desc4(sql3`count(*)`)).limit(10);
         const activeCustomersResult = await db.select({ count: sql3`count(DISTINCT ${inquiries2.userId})` }).from(inquiries2);
         const activeCustomers = Number(activeCustomersResult[0]?.count || 0);
         return {
@@ -3966,9 +4103,9 @@ var appRouter = router({
         if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
         const totalResult = await db.select({ count: sql3`count(*)` }).from(inquiries2);
         const total = Number(totalResult[0]?.count || 0);
-        const quotedResult = await db.select({ count: sql3`count(*)` }).from(inquiries2).where(eq6(inquiries2.status, "quoted"));
+        const quotedResult = await db.select({ count: sql3`count(*)` }).from(inquiries2).where(eq7(inquiries2.status, "quoted"));
         const quoted = Number(quotedResult[0]?.count || 0);
-        const completedResult = await db.select({ count: sql3`count(*)` }).from(inquiries2).where(eq6(inquiries2.status, "completed"));
+        const completedResult = await db.select({ count: sql3`count(*)` }).from(inquiries2).where(eq7(inquiries2.status, "completed"));
         const completed = Number(completedResult[0]?.count || 0);
         return {
           total,
@@ -4021,12 +4158,12 @@ var appRouter = router({
         const failedProducts = [];
         for (const item of crawlerImages) {
           try {
-            const existingProduct = await db.select({ id: products3.id, imageUrl: products3.imageUrl }).from(products3).where(eq6(products3.productId, item.productId)).limit(1);
+            const existingProduct = await db.select({ id: products3.id, imageUrl: products3.imageUrl }).from(products3).where(eq7(products3.productId, item.productId)).limit(1);
             if (existingProduct.length > 0) {
               await db.update(products3).set({
                 imageUrl: item.imageUrl,
                 updatedAt: /* @__PURE__ */ new Date()
-              }).where(eq6(products3.productId, item.productId));
+              }).where(eq7(products3.productId, item.productId));
               successCount++;
             } else {
               failedCount++;
@@ -4359,7 +4496,7 @@ var vite_config_default = defineConfig({
 init_db();
 init_schema();
 init_env();
-import { eq as eq7 } from "drizzle-orm";
+import { eq as eq8 } from "drizzle-orm";
 function extractSlugFromPath(path3) {
   const match = path3.match(/^\/resources\/([^\/\?]+)/);
   return match ? match[1] : null;
@@ -4387,7 +4524,7 @@ async function injectSeoMetaTags(template, req) {
     if (!db) {
       return template;
     }
-    const articles = await db.select().from(resources).where(eq7(resources.slug, slug)).limit(1);
+    const articles = await db.select().from(resources).where(eq8(resources.slug, slug)).limit(1);
     if (articles.length === 0 || articles[0].status !== "published") {
       return template;
     }
@@ -4484,7 +4621,7 @@ function serveStatic(app) {
 init_db();
 init_schema();
 init_env();
-import { eq as eq8 } from "drizzle-orm";
+import { eq as eq9 } from "drizzle-orm";
 var BASE_URL = ENV.viteAppTitle?.includes("ROWELL") ? "https://www.rowellhplc.com" : "https://rowell-website-test.manus.space";
 var STATIC_PAGES = [
   { path: "/", priority: 1, changefreq: "daily" },
@@ -4508,7 +4645,7 @@ async function generateSitemap(req, res) {
     const articles = await db.select({
       slug: resources.slug,
       updatedAt: resources.updatedAt
-    }).from(resources).where(eq8(resources.status, "published"));
+    }).from(resources).where(eq9(resources.status, "published"));
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
     xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
     for (const page of STATIC_PAGES) {
@@ -4550,7 +4687,7 @@ async function generateSitemap(req, res) {
 init_db();
 init_schema();
 init_env();
-import { eq as eq9 } from "drizzle-orm";
+import { eq as eq10 } from "drizzle-orm";
 function extractSlugFromPath2(path3) {
   const match = path3.match(/^\/resources\/([^\/\?]+)/);
   return match ? match[1] : null;
@@ -4606,7 +4743,7 @@ async function seoMetaInjectionMiddleware(req, res, next) {
       console.warn("[SEO] Database not available, skipping meta injection");
       return next();
     }
-    const articles = await db.select().from(resources).where(eq9(resources.slug, slug)).limit(1);
+    const articles = await db.select().from(resources).where(eq10(resources.slug, slug)).limit(1);
     if (articles.length === 0) {
       return next();
     }
@@ -4665,8 +4802,11 @@ async function startServer() {
   const server = createServer(app);
   app.use(express2.json({ limit: "50mb" }));
   app.use(express2.urlencoded({ limit: "50mb", extended: true }));
+  app.use(bodyParser.text({ type: "text/csv", limit: "50mb" }));
+  app.use(bodyParser.text({ type: "text/plain", limit: "50mb" }));
   app.use(seoMetaInjectionMiddleware);
   registerOAuthRoutes(app);
+  registerImageSyncRoutes(app);
   app.get("/sitemap.xml", generateSitemap);
   app.get("/robots.txt", (req, res) => {
     res.setHeader("Content-Type", "text/plain");
