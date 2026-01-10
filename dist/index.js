@@ -456,10 +456,10 @@ async function getDb() {
       let connectionString = process.env.DATABASE_URL;
       console.log("[Database] Original DATABASE_URL:", connectionString);
       const hasSSL = connectionString.includes("?ssl=");
-      connectionString = connectionString.replace(/\?ssl=true/, "").replace(/\?ssl=false/, "");
+      connectionString = connectionString.replace(/\?ssl=.*$/, "");
       console.log("[Database] After removing SSL param:", connectionString);
       console.log("[Database] Has SSL:", hasSSL);
-      const urlMatch = connectionString.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+      const urlMatch = connectionString.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?]+)/);
       console.log("[Database] URL match result:", urlMatch ? "SUCCESS" : "FAILED");
       if (!urlMatch) {
         console.error("[Database] Failed to parse DATABASE_URL. Expected format: mysql://username:password@host:port/database");

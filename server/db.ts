@@ -17,13 +17,14 @@ export async function getDb() {
       
       // Check if URL has ssl parameter and remove it
       const hasSSL = connectionString.includes('?ssl=');
-      connectionString = connectionString.replace(/\?ssl=true/, '').replace(/\?ssl=false/, '');
+      // Remove any SSL parameters from the connection string
+      connectionString = connectionString.replace(/\?ssl=.*$/, '');
       console.log('[Database] After removing SSL param:', connectionString);
       console.log('[Database] Has SSL:', hasSSL);
       
       // Parse the connection URL
       // Format: mysql://username:password@host:port/database
-      const urlMatch = connectionString.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+      const urlMatch = connectionString.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/([^?]+)/);
       console.log('[Database] URL match result:', urlMatch ? 'SUCCESS' : 'FAILED');
       
       if (!urlMatch) {
