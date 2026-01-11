@@ -1,35 +1,35 @@
-import { mysqlTable, mysqlSchema, AnyMySqlColumn, index, int, varchar, text, decimal, timestamp, foreignKey, mysqlEnum, json } from "drizzle-orm/mysql-core"
+import { pgTable, pgEnum, pgSchema, AnyPgColumn, index, serial, text, decimal, timestamp, foreignKey, json, integer } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
-export const aiCache = mysqlTable("ai_cache", {
-	id: int().autoincrement().notNull(),
-	questionHash: varchar({ length: 64 }).notNull(),
+export const aiCache = pgTable("ai_cache", {
+	id: serial( ).notNull(),
+	questionHash: text().notNull(),
 	questionKeywords: text(),
 	questionSample: text(),
 	answer: text().notNull(),
-	hitCount: int().default(0).notNull(),
-	likeCount: int().default(0).notNull(),
-	dislikeCount: int().default(0).notNull(),
+	hitCount: integer().default(0).notNull(),
+	likeCount: integer().default(0).notNull(),
+	dislikeCount: integer().default(0).notNull(),
 	satisfactionRate: decimal({ precision: 5, scale: 2 }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	expiresAt: timestamp({ mode: 'string' }).notNull(),
+	createdAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+	expiresAt: timestamp().notNull(),
 },
 (table) => [
 	index("ai_cache_questionHash_unique").on(table.questionHash),
 	index("idx_ai_cache_questionHash").on(table.questionHash),
 ]);
 
-export const aiConversationStats = mysqlTable("ai_conversation_stats", {
-	id: int().autoincrement().notNull(),
-	statDate: timestamp({ mode: 'string' }).notNull(),
-	totalConversations: int().default(0).notNull(),
-	totalMessages: int().default(0).notNull(),
+export const aiConversationStats = pgTable("ai_conversation_stats", {
+	id: serial().notNull(),
+	statDate: timestamp().notNull(),
+	totalConversations: integer().default(0).notNull(),
+	totalMessages: integer().default(0).notNull(),
 	avgMessagesPerConversation: decimal({ precision: 5, scale: 2 }),
-	likes: int().default(0).notNull(),
-	dislikes: int().default(0).notNull(),
+	likes: integer().default(0).notNull(),
+	dislikes: integer().default(0).notNull(),
 	satisfactionRate: decimal({ precision: 5, scale: 2 }),
-	transferToHuman: int().default(0).notNull(),
-	cacheHits: int().default(0).notNull(),
+	transferToHuman: integer().default(0).notNull(),
+	cacheHits: integer().default(0).notNull(),
 	cacheHitRate: decimal({ precision: 5, scale: 2 }),
 	llmCost: decimal({ precision: 10, scale: 2 }),
 },
@@ -38,14 +38,14 @@ export const aiConversationStats = mysqlTable("ai_conversation_stats", {
 	index("idx_ai_conversation_stats_statDate").on(table.statDate),
 ]);
 
-export const aiConversations = mysqlTable("ai_conversations", {
-	id: int().autoincrement().notNull(),
-	userId: int().references(() => users.id, { onDelete: "cascade" } ),
-	sessionId: varchar({ length: 64 }).notNull(),
-	consentMode: mysqlEnum(['standard','privacy','anonymous']).notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	expiresAt: timestamp({ mode: 'string' }),
-	isDeleted: int().default(0).notNull(),
+export const aiConversations = pgTable("ai_conversations", {
+	id: serial().notNull(),
+	userId: integer().references(() => users.id, { onDelete: "cascade" } ),
+	sessionId: text().notNull(),
+	consentMode: text().notNull(),
+	createdAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+	expiresAt: timestamp(),
+	isDeleted: integer().default(0).notNull(),
 },
 (table) => [
 	index("ai_conversations_sessionId_unique").on(table.sessionId),
@@ -54,14 +54,14 @@ export const aiConversations = mysqlTable("ai_conversations", {
 	index("idx_ai_conversations_expiresAt").on(table.expiresAt),
 ]);
 
-export const aiMessages = mysqlTable("ai_messages", {
-	id: int().autoincrement().notNull(),
-	conversationId: int().notNull().references(() => aiConversations.id, { onDelete: "cascade" } ),
-	role: mysqlEnum(['user','assistant','system']).notNull(),
+export const aiMessages = pgTable("ai_messages", {
+	id: serial().notNull(),
+	conversationId: integer().notNull().references(() => aiConversations.id, { onDelete: "cascade" } ),
+	role: text().notNull(),
 	content: text(),
 	contentEncrypted: text(),
-	feedback: mysqlEnum(['like','dislike','none']).default('none'),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	feedback: text().default('none'),
+	createdAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
 	index("idx_ai_messages_conversationId").on(table.conversationId),
@@ -69,244 +69,165 @@ export const aiMessages = mysqlTable("ai_messages", {
 	index("idx_ai_messages_createdAt_new").on(table.createdAt),
 ]);
 
-export const aiQuestionAnalysis = mysqlTable("ai_question_analysis", {
-	id: int().autoincrement().notNull(),
-	questionHash: varchar({ length: 64 }).notNull(),
-	questionSample: text(),
-	askCount: int().default(0).notNull(),
-	likeCount: int().default(0).notNull(),
-	dislikeCount: int().default(0).notNull(),
-	satisfactionRate: decimal({ precision: 5, scale: 2 }),
-	lastAskedAt: timestamp({ mode: 'string' }),
+export const aiQuestionKeywords = pgTable("ai_question_keywords", {
+	id: serial().notNull(),
+	keyword: text().notNull(),
+	questionCount: integer().default(0).notNull(),
+	lastUsed: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
-	index("ai_question_analysis_questionHash_unique").on(table.questionHash),
-	index("idx_ai_question_analysis_questionHash").on(table.questionHash),
-	index("idx_ai_question_analysis_askCount").on(table.askCount),
-	index("idx_ai_question_analysis_satisfactionRate").on(table.satisfactionRate),
+	index("ai_question_keywords_keyword_unique").on(table.keyword),
+	index("idx_ai_question_keywords_keyword").on(table.keyword),
 ]);
 
-export const apiKeys = mysqlTable("api_keys", {
-	id: int().autoincrement().notNull(),
-	keyHash: varchar({ length: 255 }).notNull(),
-	keyPrefix: varchar({ length: 20 }).notNull(),
-	name: varchar({ length: 100 }).notNull(),
+export const chromatographyColumns = pgTable("chromatography_columns", {
+	id: serial().notNull(),
+	name: text().notNull(),
+	manufacturer: text(),
+	particleSize: decimal({ precision: 5, scale: 2 }),
+	length: decimal({ precision: 6, scale: 2 }),
+	innerDiameter: decimal({ precision: 5, scale: 2 }),
+	phRange: text(),
+	maxPressure: integer(),
+	maxTemperature: integer(),
 	description: text(),
-	createdBy: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
-	permissions: varchar({ length: 255 }).default('resources:create').notNull(),
-	isActive: int().default(1).notNull(),
-	lastUsedAt: timestamp({ mode: 'string' }),
-	expiresAt: timestamp({ mode: 'string' }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-},
-(table) => [
-	index("api_keys_keyHash_unique").on(table.keyHash),
-	index("idx_api_keys_createdBy").on(table.createdBy),
-	index("idx_api_keys_isActive").on(table.isActive),
-]);
-
-export const cart = mysqlTable("cart", {
-	id: int().autoincrement().notNull(),
-	userId: int().notNull(),
-	productId: int().notNull(),
-	quantity: int().default(1).notNull(),
-	notes: text(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	specifications: json(),
+	createdAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
-export const categories = mysqlTable("categories", {
-	id: int().autoincrement().notNull(),
-	name: varchar({ length: 100 }).notNull(),
-	nameEn: varchar({ length: 100 }),
-	slug: varchar({ length: 100 }).notNull(),
-	parentId: int(),
-	level: int().default(1).notNull(),
-	displayOrder: int().default(0),
-	isVisible: int().default(1).notNull(),
-	description: text(),
-	icon: varchar({ length: 255 }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-},
-(table) => [
-	index("categories_slug_unique").on(table.slug),
-]);
-
-export const conversionFunnel = mysqlTable("conversion_funnel", {
-	id: int().autoincrement().notNull(),
-	statDate: timestamp({ mode: 'string' }).notNull(),
-	websiteVisits: int().default(0).notNull(),
-	aiConversations: int().default(0).notNull(),
-	productClicks: int().default(0).notNull(),
-	cartAdditions: int().default(0).notNull(),
-	inquiriesSubmitted: int().default(0).notNull(),
-},
-(table) => [
-	index("conversion_funnel_statDate_unique").on(table.statDate),
-	index("idx_conversion_funnel_statDate").on(table.statDate),
-]);
-
-export const inquiries = mysqlTable("inquiries", {
-	id: int().autoincrement().notNull(),
-	inquiryNumber: varchar({ length: 64 }).notNull(),
-	userId: int().notNull(),
-	status: mysqlEnum(['pending','quoted','completed','cancelled']).default('pending').notNull(),
-	urgency: mysqlEnum(['normal','urgent','very_urgent']).default('normal').notNull(),
-	budgetRange: varchar({ length: 100 }),
-	applicationNotes: text(),
-	deliveryAddress: text(),
-	totalItems: int().default(0).notNull(),
-	customerNotes: text(),
-	adminNotes: text(),
-	quotedAt: timestamp({ mode: 'string' }),
-	completedAt: timestamp({ mode: 'string' }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-	conversationId: int(),
-},
-(table) => [
-	index("inquiries_inquiryNumber_unique").on(table.inquiryNumber),
-]);
-
-export const inquiryItems = mysqlTable("inquiry_items", {
-	id: int().autoincrement().notNull(),
-	inquiryId: int().notNull(),
-	productId: int().notNull(),
-	quantity: int().default(1).notNull(),
-	notes: text(),
-	quotedPrice: varchar({ length: 50 }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+export const detectors = pgTable("detectors", {
+	id: serial().notNull(),
+	name: text().notNull(),
+	type: text().notNull(),
+	manufacturer: text(),
+	model: text(),
+	wavelengthRange: text(),
+	sensitivity: text(),
+	flowCellVolume: decimal({ precision: 6, scale: 2 }),
+	specifications: json(),
+	createdAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
-export const llmCostTracking = mysqlTable("llm_cost_tracking", {
-	id: int().autoincrement().notNull(),
-	conversationId: int().references(() => aiConversations.id, { onDelete: "set null" } ),
-	tokenCount: int().notNull(),
-	cost: decimal({ precision: 10, scale: 6 }).notNull(),
-	model: varchar({ length: 50 }).default('gpt-3.5-turbo').notNull(),
-	timestamp: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-},
-(table) => [
-	index("idx_llm_cost_tracking_conversationId").on(table.conversationId),
-	index("idx_llm_cost_tracking_timestamp").on(table.timestamp),
-]);
+export const hplcMethods = pgTable("hplc_methods", {
+	id: serial().notNull(),
+	name: text().notNull(),
+	description: text(),
+	columnId: integer().references(() => chromatographyColumns.id),
+	detectorId: integer().references(() => detectors.id),
+	mobilePhase: text(),
+	flowRate: decimal({ precision: 5, scale: 2 }),
+	injectionVolume: decimal({ precision: 6, scale: 2 }),
+	columnTemperature: decimal({ precision: 5, scale: 2 }),
+	runTime: integer(),
+	detectionWavelength: integer(),
+	gradientProgram: json(),
+	samplePreparation: text(),
+	validationData: json(),
+	createdBy: integer().references(() => users.id),
+	createdAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
 
-export const productCategories = mysqlTable("product_categories", {
-	id: int().autoincrement().notNull(),
-	productId: int().notNull().references(() => products.id, { onDelete: "cascade" } ),
-	categoryId: int().notNull().references(() => categories.id, { onDelete: "cascade" } ),
-	isPrimary: int().default(0).notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-},
-(table) => [
-	index("unique_product_category").on(table.productId, table.categoryId),
-]);
-
-export const products = mysqlTable("products", {
-	id: int().autoincrement().notNull(),
-	productId: varchar({ length: 128 }).notNull(),
-	partNumber: varchar({ length: 128 }).notNull(),
-	brand: varchar({ length: 64 }).notNull(),
-	taskId: varchar({ length: 50 }).notNull(),
-	productName: text(),
+export const methodResults = pgTable("method_results", {
+	id: serial().notNull(),
+	methodId: integer().notNull().references(() => hplcMethods.id, { onDelete: "cascade" } ),
+	sampleId: text(),
+	runDate: timestamp().notNull(),
+	operator: text(),
+	retentionTimes: json(),
+	peakAreas: json(),
+	concentrations: json(),
+	recoveryRate: decimal({ precision: 5, scale: 2 }),
+	rsd: decimal({ precision: 5, scale: 2 }),
+	chromatogramImage: text(),
 	rawData: json(),
+	notes: text(),
+	createdAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const products = pgTable("products", {
+	id: serial().notNull(),
+	name: text().notNull(),
+	category: text().notNull(),
+	subCategory: text(),
+	model: text(),
 	description: text(),
-	status: varchar({ length: 50 }).default('pending'),
-	dataQuality: varchar({ length: 50 }),
-	category: varchar({ length: 50 }).default('Other'),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	specifications: text(),
-	imageUrl: text(),
+	specifications: json(),
+	features: json(),
+	applications: json(),
+	price: decimal({ precision: 10, scale: 2 }),
+	currency: text().default('CNY'),
+	stockStatus: text().default('in_stock'),
+	leadTime: text(),
+	images: json(),
+	documents: json(),
+	relatedProducts: json(),
+	seoTitle: text(),
+	seoDescription: text(),
+	seoKeywords: text(),
+	isActive: integer().default(1).notNull(),
+	createdAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const sessions = pgTable("sessions", {
+	id: text().notNull(),
+	userId: integer().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	expiresAt: timestamp({ withTimezone: true }).notNull(),
+});
+
+export const users = pgTable("users", {
+	id: serial().notNull(),
+	username: text().notNull(),
+	email: text(),
+	passwordHash: text().notNull(),
+	role: text().default('user').notNull(),
+	fullName: text(),
+	organization: text(),
+	phone: text(),
+	isActive: integer().default(1).notNull(),
+	lastLogin: timestamp(),
+	createdAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
 },
 (table) => [
-	index("products_productId_unique").on(table.productId),
+	index("users_username_unique").on(table.username),
+	index("users_email_unique").on(table.email),
 ]);
 
-export const resourceCategories = mysqlTable("resource_categories", {
-	id: int().autoincrement().notNull(),
-	name: varchar({ length: 100 }).notNull(),
-	slug: varchar({ length: 100 }).notNull(),
+export const workflowSteps = pgTable("workflow_steps", {
+	id: serial().notNull(),
+	workflowId: integer().notNull().references(() => workflows.id, { onDelete: "cascade" } ),
+	stepNumber: integer().notNull(),
+	name: text().notNull(),
 	description: text(),
-	displayOrder: int().default(0).notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-},
-(table) => [
-	index("resource_categories_slug_unique").on(table.slug),
-]);
+	estimatedDuration: integer(),
+	requiredEquipment: json(),
+	requiredMaterials: json(),
+	safetyNotes: text(),
+	qualityCheckpoints: json(),
+	createdAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
 
-export const resourcePostTags = mysqlTable("resource_post_tags", {
-	postId: int().notNull().references(() => resources.id, { onDelete: "cascade" } ),
-	tagId: int().notNull().references(() => resourceTags.id, { onDelete: "cascade" } ),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-},
-(table) => [
-	index("pk_resource_post_tags").on(table.postId, table.tagId),
-	index("idx_resource_post_tags_postId").on(table.postId),
-	index("idx_resource_post_tags_tagId").on(table.tagId),
-]);
-
-export const resourceTags = mysqlTable("resource_tags", {
-	id: int().autoincrement().notNull(),
-	name: varchar({ length: 50 }).notNull(),
-	slug: varchar({ length: 50 }).notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-},
-(table) => [
-	index("resource_tags_name_unique").on(table.name),
-	index("resource_tags_slug_unique").on(table.slug),
-]);
-
-export const resources = mysqlTable("resources", {
-	id: int().autoincrement().notNull(),
-	slug: varchar({ length: 255 }).notNull(),
-	title: varchar({ length: 255 }).notNull(),
-	content: text().notNull(),
-	excerpt: varchar({ length: 500 }),
-	metaDescription: varchar({ length: 200 }),
-	coverImage: varchar({ length: 500 }),
-	authorName: varchar({ length: 100 }).default('ROWELL Team'),
-	status: mysqlEnum(['draft','published','archived']).default('draft').notNull(),
-	language: varchar({ length: 10 }).default('en').notNull(),
-	categoryId: int(),
-	viewCount: int().default(0).notNull(),
-	featured: int().default(0).notNull(),
-	publishedAt: timestamp({ mode: 'string' }),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-},
-(table) => [
-	index("resources_slug_unique").on(table.slug),
-	index("idx_resources_status_published").on(table.status, table.publishedAt),
-	index("idx_resources_category").on(table.categoryId),
-	index("idx_resources_featured").on(table.featured),
-	index("idx_resources_language").on(table.language),
-]);
-
-export const users = mysqlTable("users", {
-	id: int().autoincrement().notNull(),
-	openId: varchar({ length: 64 }).notNull(),
-	name: text(),
-	email: varchar({ length: 320 }),
-	loginMethod: varchar({ length: 64 }),
-	role: mysqlEnum(['user','admin']).default('user').notNull(),
-	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-	lastSignedIn: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
-	company: varchar({ length: 255 }),
-	phone: varchar({ length: 50 }),
-	country: varchar({ length: 100 }),
-	industry: varchar({ length: 100 }),
-	purchasingRole: varchar({ length: 100 }),
-	annualPurchaseVolume: varchar({ length: 100 }),
-	emailVerified: int().default(0).notNull(),
-	password: varchar({ length: 255 }),
-	customerTier: mysqlEnum(['regular','vip']).default('regular'),
-	consentMode: mysqlEnum(['standard','privacy']).default('standard'),
-	consentTimestamp: timestamp({ mode: 'string' }),
-},
-(table) => [
-	index("users_openId_unique").on(table.openId),
-]);
+export const workflows = pgTable("workflows", {
+	id: serial().notNull(),
+	name: text().notNull(),
+	description: text(),
+	category: text(),
+	purpose: text(),
+	estimatedDuration: integer(),
+	difficultyLevel: text(),
+	requiredSkills: json(),
+	safetyRequirements: text(),
+	regulatoryCompliance: json(),
+	version: text().default('1.0'),
+	status: text().default('draft'),
+	createdBy: integer().references(() => users.id),
+	approvedBy: integer().references(() => users.id),
+	approvedAt: timestamp(),
+	createdAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+	updatedAt: timestamp().default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
