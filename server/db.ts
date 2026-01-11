@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 import { InsertProduct, InsertUser, products, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
+
+const { Pool } = pg;
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -14,27 +16,29 @@ export async function getDb() {
     try {
       // Parse DATABASE_URL
       let connectionString = process.env.DATABASE_URL;
-      console.log('[Database] Original DATABASE_URL:', connectionString);
+      console.log('[Database] Connecting to PostgreSQL database');
       
-      // PostgreSQL connection string format: postgresql://username:password@host:port/database
-      // or postgres://username:password@host:port/database
-      
-      // Create postgres connection
-      const client = postgres(connectionString, {
-        ssl: 'require', // TiDB Cloud requires SSL
+      // Create PostgreSQL connection pool
+      const pool = new Pool({
+        connectionString: connectionString,
+        ssl: {
+          rejectUnauthorized: false // TiDB Cloud requires SSL
+        },
         max: 10, // Connection pool size
       });
       
       // Test the connection
       try {
-        await client`SELECT 1`;
+        const client = await pool.connect();
+        await client.query('SELECT 1');
+        client.release();
         console.log('[Database] Connection test successful');
       } catch (testError: any) {
         console.error('[Database] Connection test failed:', testError.message);
         throw testError;
       }
       
-      _db = drizzle(client);
+      _db = drizzle(pool);
       console.log('[Database] Drizzle initialized successfully');
     } catch (error) {
       console.error("[Database] Failed to connect:", error);
