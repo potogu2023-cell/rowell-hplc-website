@@ -535,18 +535,32 @@ export const appRouter = router({
             .where(finalCondition);
         } else {
           // Query all products with filters
-          query = db
-            .select()
-            .from(products)
-            .where(whereClause)
-            .orderBy(products.productName)
-            .limit(pageSize)
-            .offset(offset);
-          
-          countQuery = db
-            .select({ count: sql<number>`count(*)` })
-            .from(products)
-            .where(whereClause);
+          if (whereClause) {
+            query = db
+              .select()
+              .from(products)
+              .where(whereClause)
+              .orderBy(products.productName)
+              .limit(pageSize)
+              .offset(offset);
+            
+            countQuery = db
+              .select({ count: sql<number>`count(*)` })
+              .from(products)
+              .where(whereClause);
+          } else {
+            // No filters - query all products
+            query = db
+              .select()
+              .from(products)
+              .orderBy(products.productName)
+              .limit(pageSize)
+              .offset(offset);
+            
+            countQuery = db
+              .select({ count: sql<number>`count(*)` })
+              .from(products);
+          }
         }
         
         const [productResults, countResults] = await Promise.all([

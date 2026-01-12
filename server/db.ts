@@ -1,10 +1,8 @@
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import { InsertProduct, InsertUser, products, users } from "../drizzle/schema";
 import { ENV } from './_core/env';
-
-const { Pool } = pg;
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -16,33 +14,70 @@ export async function getDb() {
     try {
       // Parse DATABASE_URL
       let connectionString = process.env.DATABASE_URL;
-      console.log('[Database] Connecting to PostgreSQL database');
+      console.log('[Database] Original DATABASE_URL:', connectionString);
       
-      // Create PostgreSQL connection pool
-      const pool = new Pool({
-        connectionString: connectionString,
-        ssl: {
-          rejectUnauthorized: false // TiDB Cloud requires SSL
-        },
-        max: 10, // Connection pool size
+      // Check if URL has ssl parameter and remove it
+      const hasSSL = connectionString.includes('?ssl=');
+      connectionString = connectionString.replace(/\?ssl=true/, '').replace(/\?ssl=false/, '');
+      console.log('[Database] After removing SSL param:', connectionString);
+      console.log('[Database] Has SSL:', hasSSL);
+      
+      // Parse the connection URL
+      // Format: mysql://username:password@host:port/database
+      const urlMatch = connectionString.match(/mysql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+      console.log('[Database] URL match result:', urlMatch ? 'SUCCESS' : 'FAILED');
+      
+      if (!urlMatch) {
+        console.error('[Database] Failed to parse DATABASE_URL. Expected format: mysql://username:password@host:port/database');
+        throw new Error('Invalid DATABASE_URL format');
+      }
+      
+      const [, user, password, host, port, database] = urlMatch;
+      
+      // Decode URL-encoded username and password
+      const decodedUser = decodeURIComponent(user);
+      const decodedPassword = decodeURIComponent(password);
+      
+      console.log('[Database] Parsed connection info:');
+      console.log('[Database]   Host:', host);
+      console.log('[Database]   Port:', port);
+      console.log('[Database]   User:', decodedUser);
+      console.log('[Database]   Database:', database);
+      console.log('[Database]   SSL:', hasSSL);
+      
+      // Create connection pool with proper config
+      const connection = mysql.createPool({
+        host,
+        port: parseInt(port),
+        user: decodedUser,
+        password: decodedPassword,
+        database,
+        ssl: hasSSL ? {
+          rejectUnauthorized: true
+        } : undefined,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
       });
+      
+      console.log('[Database] Connection pool created');
       
       // Test the connection
       try {
-        const client = await pool.connect();
-        await client.query('SELECT 1');
-        client.release();
-        console.log('[Database] Connection test successful');
+        const testConnection = await connection.getConnection();
+        console.log('[Database] Test connection successful');
+        testConnection.release();
       } catch (testError: any) {
-        console.error('[Database] Connection test failed:', testError.message);
+        console.error('[Database] Test connection failed:', testError.message);
         throw testError;
       }
       
-      _db = drizzle(pool);
-      console.log('[Database] Drizzle initialized successfully');
-    } catch (error) {
-      console.error("[Database] Failed to connect:", error);
-      _db = null;
+      _db = drizzle(connection);
+      console.log('[Database] Drizzle instance created successfully');
+    } catch (error: any) {
+      console.error('[Database] Failed to initialize database:', error.message);
+      console.error('[Database] Error stack:', error.stack);
+      throw error;
     }
   }
   
@@ -68,8 +103,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     await db
       .insert(users)
       .values(values)
-      .onConflictDoUpdate({
-        target: users.handle,
+      .onDuplicateKeyUpdate({
         set: {
           username: user.username,
           avatarUrl: user.avatarUrl,
