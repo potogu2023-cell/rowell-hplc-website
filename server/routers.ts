@@ -15,6 +15,97 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+    register: publicProcedure
+      .input((raw: unknown) => {
+        const { z } = require('zod');
+        return z.object({
+          email: z.string().email('请输入有效的邮箱地址'),
+          password: z.string().min(6, '密码至少6个字符'),
+          name: z.string().min(2, '姓名至少2个字符'),
+          company: z.string().optional(),
+          phone: z.string().optional(),
+          country: z.string().optional(),
+          industry: z.string().optional(),
+          purchasingRole: z.string().optional(),
+          annualPurchaseVolume: z.string().optional(),
+        }).parse(raw);
+      })
+      .mutation(async ({ input }) => {
+        const { getUserByEmail, createUser } = await import('./db');
+        const { hashPassword } = await import('./password-utils');
+        
+        // Check if user already exists
+        const existingUser = await getUserByEmail(input.email);
+        if (existingUser) {
+          throw new Error('该邮箱已被注册');
+        }
+        
+        // Hash password
+        const passwordHash = await hashPassword(input.password);
+        
+        // Create user
+        const userId = await createUser({
+          email: input.email,
+          passwordHash,
+          name: input.name,
+          company: input.company,
+          phone: input.phone,
+          country: input.country,
+          industry: input.industry,
+          purchasingRole: input.purchasingRole,
+          annualPurchaseVolume: input.annualPurchaseVolume,
+        });
+        
+        return {
+          success: true,
+          message: '注册成功！请登录',
+        };
+      }),
+    login: publicProcedure
+      .input((raw: unknown) => {
+        const { z } = require('zod');
+        return z.object({
+          email: z.string().email('请输入有效的邮箱地址'),
+          password: z.string().min(1, '请输入密码'),
+        }).parse(raw);
+      })
+      .mutation(async ({ input, ctx }) => {
+        const { getUserByEmail, updateUserLastSignIn } = await import('./db');
+        const { verifyPassword } = await import('./password-utils');
+        const { setSessionCookie } = await import('./_core/cookies');
+        
+        // Find user
+        const user = await getUserByEmail(input.email);
+        if (!user || !user.passwordHash) {
+          throw new Error('邮箱或密码错误');
+        }
+        
+        // Verify password
+        const isValid = await verifyPassword(input.password, user.passwordHash);
+        if (!isValid) {
+          throw new Error('邮箱或密码错误');
+        }
+        
+        // Update last sign in
+        await updateUserLastSignIn(user.id);
+        
+        // Set session cookie
+        setSessionCookie(ctx.req, ctx.res, {
+          userId: user.id,
+          openId: user.openId || undefined,
+          email: user.email || undefined,
+          name: user.name || undefined,
+        });
+        
+        return {
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+          },
+        };
+      }),
   }),
 
   // Product routes

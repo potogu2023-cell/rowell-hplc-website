@@ -193,3 +193,63 @@ export async function getInquiryItems(inquiryId: number) {
   const { inquiryItems } = await import("../drizzle/schema");
   return await db.select().from(inquiryItems).where(eq(inquiryItems.inquiryId, inquiryId));
 }
+
+/**
+ * User authentication queries
+ */
+export async function createUser(data: {
+  email: string;
+  passwordHash: string;
+  name: string;
+  company?: string;
+  phone?: string;
+  country?: string;
+  industry?: string;
+  purchasingRole?: string;
+  annualPurchaseVolume?: string;
+}) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const result = await db.insert(users).values({
+    email: data.email,
+    passwordHash: data.passwordHash,
+    name: data.name,
+    company: data.company,
+    phone: data.phone,
+    country: data.country,
+    industry: data.industry,
+    purchasingRole: data.purchasingRole,
+    annualPurchaseVolume: data.annualPurchaseVolume,
+    loginMethod: 'password',
+    role: 'user',
+    lastSignedIn: new Date(),
+  });
+
+  return Number(result[0].insertId);
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get user: database not available");
+    return undefined;
+  }
+
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateUserLastSignIn(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot update user: database not available");
+    return;
+  }
+
+  await db.update(users)
+    .set({ lastSignedIn: new Date() })
+    .where(eq(users.id, userId));
+}

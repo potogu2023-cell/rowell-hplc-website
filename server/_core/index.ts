@@ -32,6 +32,14 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // Run database migration first
+  try {
+    const { migrateDatabase } = await import('../migrate-db');
+    await migrateDatabase();
+  } catch (error) {
+    console.error('[Server] Failed to run database migration:', error);
+  }
+
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
