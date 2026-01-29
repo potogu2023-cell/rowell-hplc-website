@@ -302,7 +302,9 @@ export default function Products() {
                   </div>
                   <CardHeader>
                     <div className="flex justify-between items-start mb-2">
-                      <Badge variant="outline">{product.status}</Badge>
+                      <Badge variant={product.status === 'discontinued' ? 'destructive' : 'outline'}>
+                        {product.status === 'discontinued' ? '已停产' : product.status}
+                      </Badge>
                       <Badge>{product.brand}</Badge>
                     </div>
                     <CardTitle className="text-lg">{product.productId}</CardTitle>

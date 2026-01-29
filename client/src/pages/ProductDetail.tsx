@@ -91,7 +91,9 @@ export default function ProductDetail() {
               <CardHeader>
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <Badge variant="outline" className="mb-2">{product.status}</Badge>
+                    <Badge variant={product.status === 'discontinued' ? 'destructive' : 'outline'} className="mb-2">
+                      {product.status === 'discontinued' ? '已停产' : product.status}
+                    </Badge>
                     <CardTitle className="text-3xl">{product.productId}</CardTitle>
                     <p className="text-lg text-muted-foreground mt-2">{product.partNumber}</p>
                   </div>
@@ -261,7 +263,9 @@ export default function ProductDetail() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t('productDetail.status')}:</span>
-                      <Badge variant="outline">{product.status}</Badge>
+                      <Badge variant={product.status === 'discontinued' ? 'destructive' : 'outline'}>
+                        {product.status === 'discontinued' ? '已停产' : product.status}
+                      </Badge>
                     </div>
                   </div>
                 </div>
