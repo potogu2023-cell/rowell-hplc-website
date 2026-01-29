@@ -7,7 +7,6 @@ import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
-// import { HelmetProvider } from "react-helmet-async";
 
 const queryClient = new QueryClient();
 

@@ -1,83 +1,38 @@
 import { Toaster } from "@/components/ui/sonner";
-import './i18n/config'; // Initialize i18n
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useTranslation } from 'react-i18next';
-import { useEffect } from 'react';
-import { getLanguageDir } from './i18n/config';
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
+import { InquiryCartProvider } from "./contexts/InquiryCartContext";
+import { CompareProvider } from "./contexts/CompareContext";
+import { InquiryCart } from "./components/InquiryCart";
+import { CompareBar } from "./components/CompareBar";
 import Home from "./pages/Home";
-import Products from "./pages/Products";
-import About from "./pages/About";
-import USPStandards from "./pages/USPStandards";
-import Applications from "./pages/Applications";
-import Contact from "./pages/Contact";
-import Register from "./pages/Register";
-import Login from "./pages/Login";
-import Profile from "./pages/Profile";
-import InquiryCart from "./pages/InquiryCart";
-import InquiryHistory from "./pages/InquiryHistory";
-import Admin from "./pages/Admin";
-import AdminInquiries from "./pages/AdminInquiries";
-import AdminCustomers from "./pages/AdminCustomers";
-import AdminAnalytics from "./pages/AdminAnalytics";
-import AdminImageUpdate from "./pages/AdminImageUpdate";
-import ExecuteImageUpdate from "./pages/ExecuteImageUpdate";
-import TestFilters from "./pages/TestFilters";
-import ProductDetail from "./pages/ProductDetail";
-import Resources from "./pages/Resources";
-import ResourceDetail from "./pages/ResourceDetail";
-import WhatsAppButton from "./components/WhatsAppButton";
-import AIChatWidget from "./components/ai/AIChatWidget";
+import ProductsPage from "./pages/ProductsPage";
+import InquiryPage from "./pages/InquiryPage";
+import InquirySuccessPage from "./pages/InquirySuccessPage";
+import ComparePage from "./pages/ComparePage";
 
 function Router() {
-  const { i18n } = useTranslation();
-
-  // Update document direction when language changes
-  useEffect(() => {
-    const dir = getLanguageDir(i18n.language);
-    document.documentElement.dir = dir;
-    document.documentElement.lang = i18n.language;
-  }, [i18n.language]);
-
+  // make sure to consider if you need authentication for certain routes
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      <main className="flex-1">
-        <Switch>
-          <Route path={"/"} component={Home} />
-          <Route path={"/products"} component={Products} />
-          <Route path={"/products/:id"} component={ProductDetail} />
-          <Route path={"/resources"} component={Resources} />
-          <Route path={"/resources/:slug"} component={ResourceDetail} />
-          <Route path={"/about"} component={About} />
-          <Route path={"/usp-standards"} component={USPStandards} />
-          <Route path={"/applications"} component={Applications} />
-          <Route path={"/contact"} component={Contact} />
-          <Route path={"/register"} component={Register} />
-          <Route path={"/login"} component={Login} />
-          <Route path={"/profile"} component={Profile} />
-          <Route path={"/inquiry-cart"} component={InquiryCart} />
-          <Route path={"/inquiry-history"} component={InquiryHistory} />
-          <Route path={"/admin"} component={Admin} />
-          <Route path={"/admin/inquiries"} component={AdminInquiries} />
-          <Route path={"/admin/customers"} component={AdminCustomers} />
-          <Route path={"/admin/analytics"} component={AdminAnalytics} />
-          <Route path={"/admin/image-update"} component={AdminImageUpdate} />
-          <Route path={"/execute-image-update"} component={ExecuteImageUpdate} />
-          <Route path={"/test-filters"} component={TestFilters} />
-          <Route path={"/404"} component={NotFound} />
-          <Route component={NotFound} />
-        </Switch>
-      </main>
-      <Footer />
-      <WhatsAppButton />
-      <AIChatWidget />
-    </div>
+    <>
+      <Switch>
+        <Route path={"/"} component={Home} />
+        <Route path="/products" component={ProductsPage} />
+        <Route path="/inquiry" component={InquiryPage} />
+        <Route path="/inquiry/success" component={InquirySuccessPage} />
+        <Route path="/compare" component={ComparePage} />
+        <Route path={"/404"} component={NotFound} />
+        {/* Final fallback route */}
+        <Route component={NotFound} />
+      </Switch>
+      
+      {/* Floating components */}
+      <InquiryCart />
+      <CompareBar />
+    </>
   );
 }
 
@@ -93,14 +48,17 @@ function App() {
         defaultTheme="light"
         // switchable
       >
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <InquiryCartProvider>
+          <CompareProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </CompareProvider>
+        </InquiryCartProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
 }
 
 export default App;
-
