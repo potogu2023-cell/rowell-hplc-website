@@ -110,10 +110,17 @@ export const appRouter = router({
 
   // Product routes
   products: router({
-    list: publicProcedure.query(async () => {
-      const { getAllProducts } = await import('./db');
-      return await getAllProducts();
-    }),
+    list: publicProcedure
+      .input((raw: unknown) => {
+        const { productsListInput } = require('./products_list_new');
+        return productsListInput.parse(raw);
+      })
+      .query(async ({ input }) => {
+        const { getDb } = await import('./db');
+        const { productsListQuery } = await import('./products_list_new');
+        const db = await getDb();
+        return await productsListQuery(input, db);
+      }),
     
     getByIds: publicProcedure
       .input((raw: unknown) => {
