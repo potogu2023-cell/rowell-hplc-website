@@ -36,24 +36,44 @@ export type InsertUser = typeof users.$inferInsert;
 
 /**
  * Products table for HPLC products
+ * Updated to match actual database structure
  */
 export const products = mysqlTable("products", {
   id: int("id").autoincrement().primaryKey(),
-  partNumber: varchar("partNumber", { length: 100 }).notNull().unique(),
-  name: varchar("name", { length: 255 }).notNull(),
-  brand: varchar("brand", { length: 100 }).notNull(),
-  category: varchar("category", { length: 100 }),
+  productId: varchar("productId", { length: 128 }),
+  brand: varchar("brand", { length: 100 }),
+  partNumber: varchar("partNumber", { length: 128 }),
+  specifications: text("specifications"),
+  imageUrl: text("imageUrl"),
+  dataQuality: varchar("dataQuality", { length: 50 }),
+  status: varchar("status", { length: 50 }).default("pending"),
+  createdAt: timestamp("createdAt").defaultNow(),
+  category: varchar("category", { length: 50 }).default("Other"),
+  prefix: varchar("prefix", { length: 16 }).notNull(),
+  name: text("name"),
+  detailedDescription: text("detailedDescription"),
   particleSize: varchar("particleSize", { length: 50 }),
   poreSize: varchar("poreSize", { length: 50 }),
-  length: varchar("length", { length: 50 }),
+  columnLength: varchar("columnLength", { length: 50 }),
   innerDiameter: varchar("innerDiameter", { length: 50 }),
   phRange: varchar("phRange", { length: 50 }),
   maxPressure: varchar("maxPressure", { length: 50 }),
   maxTemperature: varchar("maxTemperature", { length: 50 }),
-  description: text("description"),
-  imageUrl: varchar("imageUrl", { length: 500 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  usp: varchar("usp", { length: 50 }),
+  applications: text("applications"),
+  catalogUrl: varchar("catalogUrl", { length: 500 }),
+  technicalDocsUrl: text("technicalDocsUrl"),
+  phaseType: varchar("phaseType", { length: 100 }),
+  particleSizeNum: int("particleSizeNum"),
+  poreSizeNum: int("poreSizeNum"),
+  columnLengthNum: int("columnLengthNum"),
+  innerDiameterNum: int("innerDiameterNum"),
+  phMin: int("phMin"),
+  phMax: int("phMax"),
+  productType: varchar("productType", { length: 100 }),
+  descriptionQuality: mysqlEnum("descriptionQuality", ["high", "medium", "low", "extracted", "none"]).default("none"),
+  slug: varchar("slug", { length: 128 }),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
 });
 
 export type Product = typeof products.$inferSelect;
