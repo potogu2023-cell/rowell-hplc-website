@@ -135,6 +135,107 @@ export const appRouter = router({
       }),
   }),
 
+  // Resources routes
+  resources: router({
+    list: publicProcedure
+      .input((raw: unknown) => {
+        const { z } = require('zod');
+        return z.object({
+          page: z.number().min(1).default(1),
+          pageSize: z.number().min(1).max(100).default(12),
+          search: z.string().optional(),
+          category: z.string().optional(),
+        }).parse(raw);
+      })
+      .query(async ({ input }) => {
+        const { getDb } = await import('./db');
+        const db = await getDb();
+        if (!db) {
+          return { resources: [], total: 0, page: input.page, pageSize: input.pageSize };
+        }
+
+        const { resources } = await import('../drizzle/schema');
+        const { eq, like, and, desc } = await import('drizzle-orm');
+
+        // Build where conditions
+        const conditions = [];
+        if (input.search) {
+          conditions.push(
+            like(resources.title, `%${input.search}%`)
+          );
+        }
+        if (input.category) {
+          conditions.push(eq(resources.category, input.category));
+        }
+
+        // Get total count
+        const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+        const allResources = await db.select().from(resources).where(whereClause);
+        const total = allResources.length;
+
+        // Get paginated results
+        const offset = (input.page - 1) * input.pageSize;
+        const results = await db
+          .select()
+          .from(resources)
+          .where(whereClause)
+          .orderBy(desc(resources.publishedAt))
+          .limit(input.pageSize)
+          .offset(offset);
+
+        return {
+          resources: results,
+          total,
+          page: input.page,
+          pageSize: input.pageSize,
+        };
+      }),
+
+    getBySlug: publicProcedure
+      .input((raw: unknown) => {
+        const { z } = require('zod');
+        return z.object({
+          slug: z.string(),
+        }).parse(raw);
+      })
+      .query(async ({ input }) => {
+        const { getDb } = await import('./db');
+        const db = await getDb();
+        if (!db) {
+          return null;
+        }
+
+        const { resources } = await import('../drizzle/schema');
+        const { eq } = await import('drizzle-orm');
+
+        const results = await db
+          .select()
+          .from(resources)
+          .where(eq(resources.slug, input.slug))
+          .limit(1);
+
+        return results.length > 0 ? results[0] : null;
+      }),
+
+    listCategories: publicProcedure.query(async () => {
+      const { getDb } = await import('./db');
+      const db = await getDb();
+      if (!db) {
+        return [];
+      }
+
+      const { resources } = await import('../drizzle/schema');
+      const { sql } = await import('drizzle-orm');
+
+      const results = await db
+        .select({ category: resources.category })
+        .from(resources)
+        .groupBy(resources.category);
+
+      return results.map(r => r.category).filter(Boolean);
+    }),
+  }),
+
   // Inquiry routes
   inquiries: router({
     create: publicProcedure
