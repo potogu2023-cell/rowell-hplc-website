@@ -121,7 +121,7 @@ export const resources = mysqlTable("resources", {
 	id: int().autoincrement().notNull(),
 	title: varchar({ length: 255 }).notNull(),
 	slug: varchar({ length: 255 }).notNull(),
-	content: text('longtext').notNull(),
+	content: text().notNull(),
 	excerpt: text(),
 	category: varchar({ length: 50 }),
 	author: varchar({ length: 100 }),
