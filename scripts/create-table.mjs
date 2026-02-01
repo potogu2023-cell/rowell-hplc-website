@@ -1,7 +1,6 @@
 import mysql from 'mysql2/promise';
-import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,12 +29,36 @@ async function createTable() {
   console.log('✅ Connected to database');
 
   try {
-    // Read SQL file
-    const sqlFile = join(__dirname, 'create-resources-table.sql');
-    const sql = readFileSync(sqlFile, 'utf-8');
-    
+    // First, drop the table if it exists
+    console.log('Dropping existing resources table if exists...');
+    await connection.query('DROP TABLE IF EXISTS resources');
+    console.log('✅ Dropped existing table (if it existed)');
+
+    // Then create the new table
     console.log('Creating resources table...');
-    await connection.query(sql);
+    const createTableSQL = `
+      CREATE TABLE resources (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) UNIQUE NOT NULL,
+        content LONGTEXT NOT NULL,
+        excerpt TEXT,
+        category VARCHAR(50) NOT NULL,
+        author VARCHAR(100),
+        publishedAt DATETIME,
+        tags JSON,
+        status VARCHAR(20) DEFAULT 'published',
+        views INT DEFAULT 0,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_slug (slug),
+        INDEX idx_category (category),
+        INDEX idx_status (status),
+        INDEX idx_publishedAt (publishedAt)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `;
+    
+    await connection.query(createTableSQL);
     console.log('✅ Resources table created successfully');
   } catch (error) {
     console.error('❌ Error creating table:', error.message);
