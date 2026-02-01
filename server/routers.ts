@@ -1,4 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
+import { z } from 'zod';
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
@@ -17,7 +18,6 @@ export const appRouter = router({
     }),
     register: publicProcedure
       .input((raw: unknown) => {
-        const { z } = require('zod');
         return z.object({
           email: z.string().email('请输入有效的邮箱地址'),
           password: z.string().min(6, '密码至少6个字符'),
@@ -63,7 +63,6 @@ export const appRouter = router({
       }),
     login: publicProcedure
       .input((raw: unknown) => {
-        const { z } = require('zod');
         return z.object({
           email: z.string().email('请输入有效的邮箱地址'),
           password: z.string().min(1, '请输入密码'),
@@ -124,7 +123,6 @@ export const appRouter = router({
     
     getByIds: publicProcedure
       .input((raw: unknown) => {
-        const { z } = require('zod');
         return z.object({
           productIds: z.array(z.number()),
         }).parse(raw);
@@ -139,7 +137,6 @@ export const appRouter = router({
   resources: router({
     list: publicProcedure
       .input((raw: unknown) => {
-        const { z } = require('zod');
         return z.object({
           page: z.number().min(1).default(1),
           pageSize: z.number().min(1).max(100).default(12),
@@ -193,7 +190,6 @@ export const appRouter = router({
 
     getBySlug: publicProcedure
       .input((raw: unknown) => {
-        const { z } = require('zod');
         return z.object({
           slug: z.string(),
         }).parse(raw);
@@ -240,7 +236,6 @@ export const appRouter = router({
   inquiries: router({
     create: publicProcedure
       .input((raw: unknown) => {
-        const { z } = require('zod');
         return z.object({
           productIds: z.array(z.number()).min(1, '请选择至少一个产品'),
           userInfo: z.object({
