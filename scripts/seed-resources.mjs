@@ -8,7 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Database connection
-const connection = await mysql.createConnection(process.env.DATABASE_URL);
+const connection = await mysql.createConnection({
+  uri: process.env.DATABASE_URL
+});
 const db = drizzle(connection);
 
 console.log('✅ Connected to database');
