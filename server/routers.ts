@@ -138,30 +138,32 @@ export const appRouter = router({
     list: publicProcedure
       .input((raw: unknown) => {
         return z.object({
-          page: z.number().min(1).default(1),
-          pageSize: z.number().min(1).max(100).default(12),
+          page: z.number().min(1).optional(),
+          pageSize: z.number().min(1).max(100).optional(),
           search: z.string().optional(),
           category: z.string().optional(),
-        }).parse(raw);
+        }).optional().parse(raw);
       })
       .query(async ({ input }) => {
+        const page = input?.page || 1;
+        const pageSize = input?.pageSize || 12;
         const { getDb } = await import('./db');
         const db = await getDb();
         if (!db) {
-          return { resources: [], total: 0, page: input.page, pageSize: input.pageSize };
+          return { resources: [], total: 0, page, pageSize };
         }
 
         const { resources } = await import('../drizzle/schema');
         const { eq, like, and, desc } = await import('drizzle-orm');
 
         // Build where conditions
-        const conditions = [];
-        if (input.search) {
+        const conditions: any[] = [];
+        if (input?.search) {
           conditions.push(
             like(resources.title, `%${input.search}%`)
           );
         }
-        if (input.category) {
+        if (input?.category) {
           conditions.push(eq(resources.category, input.category));
         }
 
@@ -171,20 +173,20 @@ export const appRouter = router({
         const total = allResources.length;
 
         // Get paginated results
-        const offset = (input.page - 1) * input.pageSize;
+        const offset = (page - 1) * pageSize;
         const results = await db
           .select()
           .from(resources)
           .where(whereClause)
           .orderBy(desc(resources.publishedAt))
-          .limit(input.pageSize)
+          .limit(pageSize)
           .offset(offset);
 
         return {
           resources: results,
           total,
-          page: input.page,
-          pageSize: input.pageSize,
+          page,
+          pageSize,
         };
       }),
 
