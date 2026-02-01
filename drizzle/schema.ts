@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { index, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -113,3 +113,56 @@ export const inquiryItems = mysqlTable("inquiryItems", {
 
 export type InquiryItem = typeof inquiryItems.$inferSelect;
 export type InsertInquiryItem = typeof inquiryItems.$inferInsert;
+
+/**
+ * Resources table for resource center articles
+ */
+export const resources = mysqlTable("resources", {
+	id: int().autoincrement().notNull(),
+	slug: varchar({ length: 255 }).notNull(),
+	title: varchar({ length: 255 }).notNull(),
+	content: text().notNull(),
+	excerpt: varchar({ length: 500 }),
+	metaDescription: varchar({ length: 200 }),
+	coverImage: varchar({ length: 500 }),
+	authorName: varchar({ length: 100 }).default('ROWELL Team'),
+	status: mysqlEnum(['draft','published','archived']).default('draft').notNull(),
+	language: varchar({ length: 10 }).default('en').notNull(),
+	categoryId: int(),
+	viewCount: int().default(0).notNull(),
+	featured: int().default(0).notNull(),
+	publishedAt: timestamp({ mode: 'string' }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("resources_slug_unique").on(table.slug),
+	index("idx_resources_status_published").on(table.status, table.publishedAt),
+	index("idx_resources_category").on(table.categoryId),
+	index("idx_resources_featured").on(table.featured),
+	index("idx_resources_language").on(table.language),
+]);
+
+export type Resource = typeof resources.$inferSelect;
+export type InsertResource = typeof resources.$inferInsert;
+
+/**
+ * Resource categories table
+ */
+export const resourceCategories = mysqlTable("resourceCategories", {
+	id: int().autoincrement().notNull(),
+	slug: varchar({ length: 255 }).notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	description: text(),
+	parentId: int(),
+	displayOrder: int().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("resourceCategories_slug_unique").on(table.slug),
+	index("idx_resourceCategories_parent").on(table.parentId),
+]);
+
+export type ResourceCategory = typeof resourceCategories.$inferSelect;
+export type InsertResourceCategory = typeof resourceCategories.$inferInsert;
