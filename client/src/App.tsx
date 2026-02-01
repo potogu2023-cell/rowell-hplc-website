@@ -13,6 +13,8 @@ import ProductsPage from "./pages/ProductsPage";
 import InquiryPage from "./pages/InquiryPage";
 import InquirySuccessPage from "./pages/InquirySuccessPage";
 import ComparePage from "./pages/ComparePage";
+import Resources from "./pages/Resources";
+import ResourceDetail from "./pages/ResourceDetail";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -24,6 +26,8 @@ function Router() {
         <Route path="/inquiry" component={InquiryPage} />
         <Route path="/inquiry/success" component={InquirySuccessPage} />
         <Route path="/compare" component={ComparePage} />
+        <Route path="/resources" component={Resources} />
+        <Route path="/resources/:slug" component={ResourceDetail} />
         <Route path={"/404"} component={NotFound} />
         {/* Final fallback route */}
         <Route component={NotFound} />
