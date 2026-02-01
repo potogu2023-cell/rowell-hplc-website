@@ -7,10 +7,19 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Parse DATABASE_URL
+const dbUrl = new URL(process.env.DATABASE_URL);
+const dbConfig = {
+  host: dbUrl.hostname,
+  port: parseInt(dbUrl.port) || 3306,
+  user: dbUrl.username, // Keep full username for TiDB (e.g., '4UghFjJ7qjGhgt4.root')
+  password: dbUrl.password,
+  database: dbUrl.pathname.slice(1), // Remove leading '/'
+  ssl: dbUrl.searchParams.get('ssl') === 'true' ? { rejectUnauthorized: false } : undefined
+};
+
 // Database connection
-const connection = await mysql.createConnection({
-  uri: process.env.DATABASE_URL
-});
+const connection = await mysql.createConnection(dbConfig);
 const db = drizzle(connection);
 
 console.log('✅ Connected to database');
