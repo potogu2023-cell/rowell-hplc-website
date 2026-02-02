@@ -131,6 +131,45 @@ export const appRouter = router({
         const { getProductsByIds } = await import('./db');
         return await getProductsByIds(input.productIds);
       }),
+
+    getBrandStats: publicProcedure
+      .input((raw: unknown) => {
+        return z.object({
+          categoryId: z.number().optional(),
+        }).optional().parse(raw);
+      })
+      .query(async ({ input }) => {
+        const { getDb } = await import('./db');
+        const db = await getDb();
+        if (!db) return {};
+
+        const { products } = await import('../drizzle/schema');
+        const { eq, sql } = await import('drizzle-orm');
+
+        let query = db
+          .select({
+            brand: products.brand,
+            count: sql<number>`count(*)`
+          })
+          .from(products)
+          .where(eq(products.status, 'active'));
+
+        if (input?.categoryId) {
+          const { categories } = await import('../drizzle/schema');
+          query = query.where(eq(products.categoryId, input.categoryId)) as any;
+        }
+
+        const results = await query.groupBy(products.brand);
+        
+        const brandStats: Record<string, number> = {};
+        results.forEach((row: any) => {
+          if (row.brand) {
+            brandStats[row.brand] = Number(row.count);
+          }
+        });
+
+        return brandStats;
+      }),
   }),
 
   // Resources routes
