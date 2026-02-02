@@ -172,6 +172,53 @@ export const appRouter = router({
       }),
   }),
 
+  // Category routes
+  category: router({  
+    getAll: publicProcedure.query(async () => {
+      const { getDb } = await import('./db');
+      const db = await getDb();
+      if (!db) return [];
+
+      const { products } = await import('../drizzle/schema');
+      const { sql, eq } = await import('drizzle-orm');
+
+      const results = await db
+        .select({
+          name: products.category,
+          count: sql<number>`count(*)`
+        })
+        .from(products)
+        .where(eq(products.status, 'active'))
+        .groupBy(products.category);
+
+      return results.map((row: any, index: number) => ({
+        id: index + 1,
+        name: row.name || 'Other',
+        slug: (row.name || 'other').toLowerCase().replace(/\s+/g, '-'),
+        count: Number(row.count)
+      }));
+    }),
+  }),
+
+  // Cart routes (simplified for non-authenticated users)
+  cart: router({
+    add: publicProcedure
+      .input((raw: unknown) => {
+        return z.object({
+          productId: z.number(),
+          quantity: z.number().min(1).default(1),
+        }).parse(raw);
+      })
+      .mutation(async ({ input }) => {
+        // For now, just return success without actually storing
+        // This can be enhanced with session-based cart storage later
+        return {
+          success: true,
+          message: 'Product added to inquiry list',
+        };
+      }),
+  }),
+
   // Resources routes
   resources: router({
     list: publicProcedure
