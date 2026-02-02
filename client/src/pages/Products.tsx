@@ -133,7 +133,7 @@ export default function Products() {
   const filteredProducts = products;
 
   // Get unique brands from brand stats API (all brands, not just current page)
-  const brands = (brandStats && typeof brandStats === 'object') ? Object.keys(brandStats).sort() : [];
+  const brands = (brandStats && typeof brandStats === 'object' && !Array.isArray(brandStats)) ? Object.keys(brandStats).sort() : [];
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
