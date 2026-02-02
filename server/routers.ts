@@ -236,7 +236,7 @@ export const appRouter = router({
         const { getDb } = await import('./db');
         const db = await getDb();
         if (!db) {
-          return { resources: [], total: 0, page, pageSize };
+          return { items: [], total: 0, page, pageSize };
         }
 
         const { resources } = await import('../drizzle/schema');
@@ -269,7 +269,7 @@ export const appRouter = router({
           .offset(offset);
 
         return {
-          resources: results,
+          items: results,
           total,
           page,
           pageSize,

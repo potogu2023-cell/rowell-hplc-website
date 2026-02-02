@@ -2,12 +2,6 @@ var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-}) : x)(function(x) {
-  if (typeof require !== "undefined") return require.apply(this, arguments);
-  throw Error('Dynamic require of "' + x + '" is not supported');
-});
 var __esm = (fn, res) => function __init() {
   return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
 };
@@ -35,7 +29,7 @@ __export(schema_exports, {
   resources: () => resources,
   users: () => users
 });
-import { index, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { index, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 var users, products, inquiries, inquiryItems, resources, resourceCategories;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
@@ -127,28 +121,21 @@ var init_schema = __esm({
       "resources",
       {
         id: int().autoincrement().notNull(),
-        slug: varchar({ length: 255 }).notNull(),
         title: varchar({ length: 255 }).notNull(),
+        slug: varchar({ length: 255 }).notNull(),
         content: text().notNull(),
-        excerpt: varchar({ length: 500 }),
-        metaDescription: varchar({ length: 200 }),
-        coverImage: varchar({ length: 500 }),
-        authorName: varchar({ length: 100 }).default("ROWELL Team"),
-        status: mysqlEnum(["draft", "published", "archived"]).default("draft").notNull(),
-        language: varchar({ length: 10 }).default("en").notNull(),
-        categoryId: int(),
-        viewCount: int().default(0).notNull(),
-        featured: int().default(0).notNull(),
+        excerpt: text(),
+        category: varchar({ length: 50 }),
+        author: varchar({ length: 100 }),
         publishedAt: timestamp({ mode: "string" }),
-        createdAt: timestamp({ mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
-        updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull()
+        tags: json(),
+        status: varchar({ length: 20 }),
+        views: int().default(0),
+        createdAt: timestamp({ mode: "string" }),
+        updatedAt: timestamp({ mode: "string" })
       },
       (table) => [
-        index("resources_slug_unique").on(table.slug),
-        index("idx_resources_status_published").on(table.status, table.publishedAt),
-        index("idx_resources_category").on(table.categoryId),
-        index("idx_resources_featured").on(table.featured),
-        index("idx_resources_language").on(table.language)
+        index("resources_slug_unique").on(table.slug)
       ]
     );
     resourceCategories = mysqlTable(
@@ -208,10 +195,22 @@ __export(db_exports, {
 });
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const dbUrl = new URL(process.env.DATABASE_URL);
+      const sslParam = dbUrl.searchParams.get("ssl");
+      const poolConnection = mysql.createPool({
+        host: dbUrl.hostname,
+        port: parseInt(dbUrl.port) || 3306,
+        user: dbUrl.username,
+        password: dbUrl.password,
+        database: dbUrl.pathname.slice(1),
+        // Remove leading '/'
+        ssl: sslParam === "true" ? { rejectUnauthorized: true } : void 0
+      });
+      _db = drizzle(poolConnection);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -1285,6 +1284,7 @@ function registerImageSyncRoutes(app) {
 
 // server/routers.ts
 init_cookies();
+import { z as z3 } from "zod";
 
 // server/_core/systemRouter.ts
 import { z } from "zod";
@@ -1444,7 +1444,6 @@ var appRouter = router({
       };
     }),
     register: publicProcedure.input((raw) => {
-      const { z: z3 } = __require("zod");
       return z3.object({
         email: z3.string().email("\u8BF7\u8F93\u5165\u6709\u6548\u7684\u90AE\u7BB1\u5730\u5740"),
         password: z3.string().min(6, "\u5BC6\u7801\u81F3\u5C116\u4E2A\u5B57\u7B26"),
@@ -1481,7 +1480,6 @@ var appRouter = router({
       };
     }),
     login: publicProcedure.input((raw) => {
-      const { z: z3 } = __require("zod");
       return z3.object({
         email: z3.string().email("\u8BF7\u8F93\u5165\u6709\u6548\u7684\u90AE\u7BB1\u5730\u5740"),
         password: z3.string().min(1, "\u8BF7\u8F93\u5165\u5BC6\u7801")
@@ -1527,19 +1525,145 @@ var appRouter = router({
       return await productsListQuery2(input, db);
     }),
     getByIds: publicProcedure.input((raw) => {
-      const { z: z3 } = __require("zod");
       return z3.object({
         productIds: z3.array(z3.number())
       }).parse(raw);
     }).query(async ({ input }) => {
       const { getProductsByIds: getProductsByIds2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       return await getProductsByIds2(input.productIds);
+    }),
+    getBrandStats: publicProcedure.input((raw) => {
+      return z3.object({
+        categoryId: z3.number().optional()
+      }).optional().parse(raw);
+    }).query(async ({ input }) => {
+      const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const db = await getDb2();
+      if (!db) return {};
+      const { products: products2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { eq: eq7, sql: sql2 } = await import("drizzle-orm");
+      let query = db.select({
+        brand: products2.brand,
+        count: sql2`count(*)`
+      }).from(products2).where(eq7(products2.status, "active"));
+      if (input?.categoryId) {
+        const { categories } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+        query = query.where(eq7(products2.categoryId, input.categoryId));
+      }
+      const results = await query.groupBy(products2.brand);
+      const brandStats = {};
+      results.forEach((row) => {
+        if (row.brand) {
+          brandStats[row.brand] = Number(row.count);
+        }
+      });
+      return brandStats;
+    })
+  }),
+  // Category routes
+  category: router({
+    getAll: publicProcedure.query(async () => {
+      const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const db = await getDb2();
+      if (!db) return [];
+      const { products: products2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { sql: sql2, eq: eq7 } = await import("drizzle-orm");
+      const results = await db.select({
+        name: products2.category,
+        count: sql2`count(*)`
+      }).from(products2).where(eq7(products2.status, "active")).groupBy(products2.category);
+      return results.map((row, index2) => ({
+        id: index2 + 1,
+        name: row.name || "Other",
+        slug: (row.name || "other").toLowerCase().replace(/\s+/g, "-"),
+        count: Number(row.count)
+      }));
+    })
+  }),
+  // Cart routes (simplified for non-authenticated users)
+  cart: router({
+    add: publicProcedure.input((raw) => {
+      return z3.object({
+        productId: z3.number(),
+        quantity: z3.number().min(1).default(1)
+      }).parse(raw);
+    }).mutation(async ({ input }) => {
+      return {
+        success: true,
+        message: "Product added to inquiry list"
+      };
+    })
+  }),
+  // Resources routes
+  resources: router({
+    list: publicProcedure.input((raw) => {
+      return z3.object({
+        page: z3.number().min(1).optional(),
+        pageSize: z3.number().min(1).max(100).optional(),
+        search: z3.string().optional(),
+        category: z3.string().optional()
+      }).optional().parse(raw);
+    }).query(async ({ input }) => {
+      const page = input?.page || 1;
+      const pageSize = input?.pageSize || 12;
+      const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const db = await getDb2();
+      if (!db) {
+        return { items: [], total: 0, page, pageSize };
+      }
+      const { resources: resources2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { eq: eq7, like, and: and2, desc } = await import("drizzle-orm");
+      const conditions = [];
+      if (input?.search) {
+        conditions.push(
+          like(resources2.title, `%${input.search}%`)
+        );
+      }
+      if (input?.category) {
+        conditions.push(eq7(resources2.category, input.category));
+      }
+      const whereClause = conditions.length > 0 ? and2(...conditions) : void 0;
+      const allResources = await db.select().from(resources2).where(whereClause);
+      const total = allResources.length;
+      const offset = (page - 1) * pageSize;
+      const results = await db.select().from(resources2).where(whereClause).orderBy(desc(resources2.publishedAt)).limit(pageSize).offset(offset);
+      return {
+        items: results,
+        total,
+        page,
+        pageSize
+      };
+    }),
+    getBySlug: publicProcedure.input((raw) => {
+      return z3.object({
+        slug: z3.string()
+      }).parse(raw);
+    }).query(async ({ input }) => {
+      const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const db = await getDb2();
+      if (!db) {
+        return null;
+      }
+      const { resources: resources2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { eq: eq7 } = await import("drizzle-orm");
+      const results = await db.select().from(resources2).where(eq7(resources2.slug, input.slug)).limit(1);
+      return results.length > 0 ? results[0] : null;
+    }),
+    listCategories: publicProcedure.query(async () => {
+      const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const db = await getDb2();
+      if (!db) {
+        return [];
+      }
+      const { resources: resources2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const { sql: sql2 } = await import("drizzle-orm");
+      const results = await db.select({ category: resources2.category }).from(resources2).groupBy(resources2.category);
+      return results.map((r) => r.category).filter(Boolean);
     })
   }),
   // Inquiry routes
   inquiries: router({
     create: publicProcedure.input((raw) => {
-      const { z: z3 } = __require("zod");
       return z3.object({
         productIds: z3.array(z3.number()).min(1, "\u8BF7\u9009\u62E9\u81F3\u5C11\u4E00\u4E2A\u4EA7\u54C1"),
         userInfo: z3.object({
