@@ -7,6 +7,7 @@ import { Mail, Phone, MapPin, MessageSquare, Send } from "lucide-react";
 import { useTranslation } from 'react-i18next';
 import { useState } from "react";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 export default function Contact() {
   const { t } = useTranslation();
@@ -21,36 +22,9 @@ export default function Contact() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name || !formData.email || !formData.message) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      // Send email using mailto (simple approach)
-      const subject = `Product Inquiry from ${formData.name}`;
-      const body = `
-Name: ${formData.name}
-Company: ${formData.company}
-Email: ${formData.email}
-Phone: ${formData.phone}
-Product ID: ${formData.productId}
-Quantity: ${formData.quantity}
-
-Message:
-${formData.message}
-      `.trim();
-
-      const mailtoLink = `mailto:info@rowellhplc.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.location.href = mailtoLink;
-
-      toast.success("Opening email client...");
-      
+  const createContactMutation = trpc.inquiries.create.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message || "Your inquiry has been submitted successfully!");
       // Reset form
       setFormData({
         name: "",
@@ -61,11 +35,52 @@ ${formData.message}
         quantity: "",
         message: "",
       });
-    } catch (error) {
-      toast.error("Failed to send inquiry");
-    } finally {
       setIsSubmitting(false);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to submit inquiry. Please try again.");
+      setIsSubmitting(false);
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.email || !formData.message) {
+      toast.error("Please fill in all required fields");
+      return;
     }
+
+    setIsSubmitting(true);
+
+    // If productId is provided, try to find the product and create inquiry
+    // Otherwise, send a general contact message
+    let productIds: number[] = [];
+    
+    if (formData.productId) {
+      // Try to parse product ID as a number
+      const parsedId = parseInt(formData.productId, 10);
+      if (!isNaN(parsedId)) {
+        productIds = [parsedId];
+      }
+    }
+
+    // If no valid product ID, create a dummy inquiry with product ID 1
+    // (This is a workaround since the API requires at least one product)
+    if (productIds.length === 0) {
+      productIds = [1]; // Use first product as placeholder
+    }
+
+    createContactMutation.mutate({
+      productIds,
+      userInfo: {
+        name: formData.name,
+        email: formData.email,
+        company: formData.company || undefined,
+        phone: formData.phone || undefined,
+        message: formData.message,
+      },
+    });
   };
 
   return (

@@ -148,10 +148,6 @@ export default function Home() {
             {t('home.hero_description')}
           </p>
           <div className="flex gap-4 justify-center flex-wrap">
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
-              <MessageCircle className="w-5 h-5 mr-2" />
-              {t('home.ask_ai_advisor')}
-            </Button>
             <Button size="lg" asChild>
               <Link href="/products">
                 <a>{t('home.browse_products') || 'Browse Products'}</a>
