@@ -1533,9 +1533,12 @@ var appRouter = router({
       return await getProductsByIds2(input.productIds);
     }),
     getBrandStats: publicProcedure.input((raw) => {
+      if (raw === null || raw === void 0) {
+        return {};
+      }
       return z3.object({
         categoryId: z3.number().optional()
-      }).optional().parse(raw);
+      }).parse(raw);
     }).query(async ({ input }) => {
       const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       const db = await getDb2();

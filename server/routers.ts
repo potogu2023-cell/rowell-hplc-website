@@ -134,9 +134,12 @@ export const appRouter = router({
 
     getBrandStats: publicProcedure
       .input((raw: unknown) => {
+        if (raw === null || raw === undefined) {
+          return {};
+        }
         return z.object({
           categoryId: z.number().optional(),
-        }).optional().parse(raw);
+        }).parse(raw);
       })
       .query(async ({ input }) => {
         const { getDb } = await import('./db');
