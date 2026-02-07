@@ -159,3 +159,23 @@ export const resourceCategories = mysqlTable("resourceCategories", {
 
 export type ResourceCategory = typeof resourceCategories.$inferSelect;
 export type InsertResourceCategory = typeof resourceCategories.$inferInsert;
+
+// USP Standards table
+export const uspStandards = mysqlTable("usp_standards", {
+	id: int().primaryKey().autoincrement(),
+	code: varchar({ length: 10 }).notNull().unique(),
+	name: varchar({ length: 100 }).notNull(),
+	description: text(),
+	chemicalName: varchar("chemical_name", { length: 200 }),
+	commonApplications: text("common_applications"),
+	isPopular: boolean("is_popular").default(false),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("idx_usp_code").on(table.code),
+	index("idx_usp_popular").on(table.isPopular),
+]);
+
+export type USPStandard = typeof uspStandards.$inferSelect;
+export type InsertUSPStandard = typeof uspStandards.$inferInsert;

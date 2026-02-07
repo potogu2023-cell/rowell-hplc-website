@@ -222,6 +222,26 @@ export const appRouter = router({
       }),
   }),
 
+  // USP Standards routes
+  usp: router({
+    listWithProductCount: publicProcedure.query(async () => {
+      const { listUSPStandardsWithProductCount } = await import('./db-usp');
+      return listUSPStandardsWithProductCount();
+    }),
+
+    getByCode: publicProcedure
+      .input(z.object({ code: z.string() }))
+      .query(async ({ input }) => {
+        const { getUSPStandardByCode } = await import('./db-usp');
+        return getUSPStandardByCode(input.code);
+      }),
+
+    fillProductData: publicProcedure.mutation(async () => {
+      const { fillProductUSPData } = await import('./db-usp');
+      return fillProductUSPData();
+    }),
+  }),
+
   // Resources routes
   resources: router({
     list: publicProcedure
