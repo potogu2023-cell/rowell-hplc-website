@@ -168,7 +168,7 @@ export const uspStandards = mysqlTable("usp_standards", {
 	description: text(),
 	chemicalName: varchar("chemical_name", { length: 200 }),
 	commonApplications: text("common_applications"),
-	isPopular: boolean("is_popular").default(false),
+	isPopular: int("is_popular").default(0).notNull(),
 	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 },
