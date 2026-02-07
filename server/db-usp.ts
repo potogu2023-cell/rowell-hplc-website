@@ -8,18 +8,19 @@
  * 4. 获取USP标准及其产品数量
  */
 
-import { db } from './db';
+import { getDb } from './db';
 import { products, uspStandards } from '../drizzle/schema';
 import { eq, like, and, or, sql } from 'drizzle-orm';
 
 /**
- * 获取所有USP标准,按displayOrder排序
+ * 获取所有USP标准,按code排序
  */
 export async function getAllUSPStandards() {
   try {
+    const db = await getDb();
     const standards = await db.select()
       .from(uspStandards)
-      .orderBy(uspStandards.displayOrder);
+      .orderBy(uspStandards.code);
     
     return standards;
   } catch (error) {
@@ -34,6 +35,7 @@ export async function getAllUSPStandards() {
  */
 export async function getUSPStandardByCode(code: string) {
   try {
+    const db = await getDb();
     const standard = await db.select()
       .from(uspStandards)
       .where(eq(uspStandards.code, code))
@@ -59,6 +61,7 @@ export async function getUSPStandardByCode(code: string) {
  */
 export async function getProductsByUSPStandard(uspCode: string, limit: number = 50) {
   try {
+    const db = await getDb();
     // 精确匹配USP标准
     // 匹配以下情况:
     // 1. usp = "L1" (完全匹配)
@@ -68,15 +71,11 @@ export async function getProductsByUSPStandard(uspCode: string, limit: number = 
     const matchedProducts = await db.select()
       .from(products)
       .where(
-        and(
-          or(
-            eq(products.usp, uspCode),                                    // "L1"
-            like(products.usp, `${uspCode},%`),                          // "L1,..."
-            like(products.usp, `%,${uspCode}`),                          // "...,L1"
-            like(products.usp, `%,${uspCode},%`)                         // "...,L1,..."
-          ),
-          // 只返回active状态的产品
-          eq(products.status, 'active')
+        or(
+          eq(products.usp, uspCode),                                    // "L1"
+          like(products.usp, `${uspCode},%`),                          // "L1,..."
+          like(products.usp, `%,${uspCode}`),                          // "...,L1"
+          like(products.usp, `%,${uspCode},%`)                         // "...,L1,..."
         )
       )
       .orderBy(products.brand, products.name)
@@ -121,8 +120,9 @@ export async function getUSPStandardWithProducts(uspCode: string, productLimit: 
  * 获取所有USP标准及其对应的产品数量
  * 用于在USP Standards页面显示每个标准有多少个产品
  */
-export async function getAllUSPStandardsWithProductCount() {
+export async function listUSPStandardsWithProductCount() {
   try {
+    const db = await getDb();
     const standards = await getAllUSPStandards();
     
     // 为每个标准计算产品数量
@@ -134,14 +134,11 @@ export async function getAllUSPStandardsWithProductCount() {
         })
           .from(products)
           .where(
-            and(
-              or(
-                eq(products.usp, standard.code),
-                like(products.usp, `${standard.code},%`),
-                like(products.usp, `%,${standard.code}`),
-                like(products.usp, `%,${standard.code},%`)
-              ),
-              eq(products.status, 'active')
+            or(
+              eq(products.usp, standard.code),
+              like(products.usp, `${standard.code},%`),
+              like(products.usp, `%,${standard.code}`),
+              like(products.usp, `%,${standard.code},%`)
             )
           );
         
@@ -167,6 +164,7 @@ export async function getAllUSPStandardsWithProductCount() {
  */
 export async function fillProductUSPData() {
   try {
+    const db = await getDb();
     const updates = [];
     
     // L1 (C18)
